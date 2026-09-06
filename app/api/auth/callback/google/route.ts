@@ -7,7 +7,8 @@ export async function GET(req: NextRequest) {
   if (error) return new NextResponse(`OAuth error: ${error}`, { status: 400 });
   if (!code) return new NextResponse("Missing code", { status: 400 });
 
-  const tokens = await exchangeCodeForTokens(code);
+  const redirectUri = `${req.nextUrl.origin}/api/auth/callback/google`;
+  const tokens = await exchangeCodeForTokens(code, redirectUri);
   const res = NextResponse.redirect(new URL("/?connected=1", req.url));
 
   const expiryMs = Date.now() + tokens.expires_in * 1000;
