@@ -1,0 +1,4 @@
+* { box-sizing: border-box; }
+a { color: #60a5fa; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+pre { white-space: pre-wrap; word-break: break-word; }

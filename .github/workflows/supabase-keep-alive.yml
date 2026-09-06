@@ -1,0 +1,19 @@
+name: Keep Supabase Alive
+on:
+  schedule:
+    - cron: '0 6 * * 1,3,5'
+  workflow_dispatch:
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then echo "❌ Missing secrets"; exit 1; fi
+          echo "📡 Pinging $SUPABASE_URL/rest/v1/media?select=id&limit=1"
+          CODE=$(curl -s -o /tmp/out.txt -w "%{http_code}" -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" "$SUPABASE_URL/rest/v1/media?select=id&limit=1")
+          cat /tmp/out.txt
+          if [ "$CODE" = "200" ] || [ "$CODE" = "206" ]; then echo "✅ Alive ($CODE)"; else echo "❌ Failed ($CODE)"; exit 1; fi
