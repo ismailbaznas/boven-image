@@ -1,19 +1,24 @@
 export const BLOGGER_SCOPE = "https://www.googleapis.com/auth/blogger";
 export const USERINFO_EMAIL_SCOPE = "https://www.googleapis.com/auth/userinfo.email";
 
-export function getOAuthConfig() {
+export function getOAuthConfig(redirectUri?: string) {
   const clientId = process.env.GOOGLE_CLIENT_ID!;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/api/auth/callback/google";
-  if (!clientId || !clientSecret) throw new Error("Missing GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in .env.local");
-  return { clientId, clientSecret, redirectUri };
+  const configuredRedirectUri = process.env.GOOGLE_REDIRECT_URI;
+  const resolvedRedirectUri = redirectUri || configuredRedirectUri || "http://localhost:3000/api/auth/callback/google";
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Missing GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in .env.local");
+  }
+
+  return { clientId, clientSecret, redirectUri: resolvedRedirectUri };
 }
 
-export function buildAuthUrl(state?: string) {
-  const { clientId, redirectUri } = getOAuthConfig();
+export function buildAuthUrl(state?: string, redirectUri?: string) {
+  const { clientId, redirectUri: resolvedRedirectUri } = getOAuthConfig(redirectUri);
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: redirectUri,
+    redirect_uri: resolvedRedirectUri,
     response_type: "code",
     scope: `${BLOGGER_SCOPE} ${USERINFO_EMAIL_SCOPE}`,
     access_type: "offline",
@@ -24,8 +29,8 @@ export function buildAuthUrl(state?: string) {
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-export async function exchangeCodeForTokens(code: string) {
-  const { clientId, clientSecret, redirectUri } = getOAuthConfig();
+export async function exchangeCodeForTokens(code: string, redirectUri?: string) {
+  const { clientId, clientSecret, redirectUri: resolvedRedirectUri } = getOAuthConfig(redirectUri);
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -33,7 +38,7 @@ export async function exchangeCodeForTokens(code: string) {
       code,
       client_id: clientId,
       client_secret: clientSecret,
-      redirect_uri: redirectUri,
+      redirect_uri: resolvedRedirectUri,
       grant_type: "authorization_code",
     }),
   });
