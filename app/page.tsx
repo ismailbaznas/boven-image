@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import "./vault.css";
+import { bloggerSrcSet, bloggerVariant } from "@/lib/image";
 
 type Media = {
   id: string;
@@ -153,10 +154,20 @@ export default function VaultPage() {
         </div>
 
         <div className="media-grid">
-          {items.map((m) => (
+          {items.map((m) => {
+            const thumb = bloggerVariant(m.blogger_url, "card");
+            const thumbSmall = bloggerVariant(m.blogger_url, "thumb");
+            return (
             <article className="media-card" key={m.id} onClick={() => setSelected(m)}>
               <div className="thumb-wrap">
-                <img src={m.blogger_url_s1600 || m.blogger_url} alt={m.title || m.filename} loading="lazy" />
+                <img
+                  src={thumb}
+                  srcSet={`${thumbSmall} 320w, ${thumb} 640w`}
+                  sizes="(max-width: 768px) 50vw, 240px"
+                  alt={m.title || m.filename}
+                  loading="lazy"
+                  decoding="async"
+                />
                 <div className="thumb-overlay"><span>View details</span></div>
               </div>
               <div className="media-info">
@@ -169,7 +180,8 @@ export default function VaultPage() {
                 </div>
               </div>
             </article>
-          ))}
+          );
+          })}
         </div>
 
         {!items.length && (
@@ -211,7 +223,15 @@ export default function VaultPage() {
       {selected && (
         <div className="modal-backdrop detail-backdrop" onClick={() => setSelected(null)}>
           <aside className="detail-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="detail-image"><img src={selected.blogger_url_s1600 || selected.blogger_url} alt={selected.title || selected.filename} /></div>
+            <div className="detail-image">
+              <img
+                src={bloggerVariant(selected.blogger_url, "medium")}
+                srcSet={bloggerSrcSet(selected.blogger_url)}
+                sizes="(max-width: 768px) 100vw, 400px"
+                alt={selected.title || selected.filename}
+                loading="eager"
+              />
+            </div>
             <div className="detail-content">
               <div className="modal-header"><div><div className="eyebrow">MEDIA DETAIL</div><h2>{selected.id}</h2></div><button className="close-btn" onClick={() => setSelected(null)}>×</button></div>
               <h3>{selected.title || selected.filename}</h3>
