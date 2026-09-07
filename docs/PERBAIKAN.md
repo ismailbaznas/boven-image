@@ -10,7 +10,31 @@ Dokumen ini mencatat riwayat tahapan perbaikan pada aplikasi **Media Vault (Bove
 |---|---|---|
 | **Baseline (Awal)** | `2ff8c39` | Normalisasi folder organisasi/program, sidebar 1-expand, Blogger resumable upload |
 | **Tahap 1 (Selesai)** | `69aa5d4` | Input field dipermudah (datalist org & prog), ID `boven-digoel-[N]`, filename `[file]-[org]-[prog]-[id].[ext]`, sampul folder manual, mobile compact |
-| **Tahap 2 (Selesai)** | *Pending commit* | Multi-file staging preview, progressive batch uploader dengan live progress bar, bebas timeout serverless |
+| **Tahap 2 (Selesai)** | `5e3cbb9` | Multi-file staging preview, progressive batch uploader dengan live progress bar, bebas timeout serverless |
+| **Tahap 3 (Selesai)** | *Pending commit* | Mobile Off-Canvas Drawer (Sandwich ☰) & Floating Bottom Bar untuk akses penuh folder & program |
+
+---
+
+## 🚀 TAHAP 3 — Mobile Off-Canvas Drawer & Floating Quick Navigation
+
+### 1. Masalah Mobile Sebelumnya
+- Pada layar smartphone/tablet, sidebar dipadatkan menjadi strip sempit 64px dan tree folder organisasi & program disembunyikan (`display: none`), sehingga user mobile tidak bisa melihat atau memilih program per organisasi dari sidebar.
+- Ruang layar utama terpotong 64px di sebelah kiri.
+
+### 2. Solusi & Perubahan Baru (`app/page.tsx` & `app/vault.css`)
+- **Off-Canvas Slide-in Drawer:**
+  - Sidebar di mobile/tablet (<= 900px) menjadi slide-in drawer penuh yang nyaman dibuka via tombol Sandwich (☰) dan ditutup via tombol silang (✕) atau tap di luar area (backdrop).
+  - Tree **FOLDER & PROGRAM** dapat dibuka dan ditelusuri lengkap di mobile. Saat salah satu program dipilih, drawer otomatis tertutup dan halaman langsung menampilkan foto-foto dari program tersebut.
+- **Sandwich Button di Topbar:**
+  - Tombol `[ ☰ Menu & Folder (N) ]` ditempatkan di bagian atas untuk membuka navigasi folder dengan 1 ketukan.
+- **Floating Bottom Navigation Bar:**
+  - Menu dock mengambang di bawah layar ponsel memudahkan jangkauan jempol:
+    1. `[ ▦ Semua ]` — Reset filter dan kembali ke semua media.
+    2. `[ 📁 Folder ]` — Buka drawer menu & seluruh folder organisasi/program.
+    3. `[ ＋ Upload ]` — Buka modal upload multi-foto.
+    4. `[ 🔍 Cari ]` — Fokus instan ke kotak pencarian.
+- **Lebar Layar 100% Penuh:**
+  - Galeri media di mobile kini menggunakan 100% lebar layar ponsel tanpa terpotong strip sidebar statis.
 
 ---
 

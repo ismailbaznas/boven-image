@@ -111,6 +111,7 @@ export default function VaultPage() {
   const [settingCover, setSettingCover] = useState(false);
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   async function load(org?: string, prog?: string) {
     try {
@@ -304,51 +305,101 @@ export default function VaultPage() {
 
   return (
     <main className="vault-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-mark">B</div>
-          <div>
-            <strong>Boven Image</strong>
-            <span>Media Vault</span>
+      {/* Backdrop for mobile drawer */}
+      <div
+        className={`mobile-backdrop ${mobileMenuOpen ? "active" : ""}`}
+        onClick={() => setMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
+
+      <aside className={`sidebar ${mobileMenuOpen ? "mobile-open" : ""}`}>
+        <div className="sidebar-top-bar">
+          <div className="brand">
+            <div className="brand-mark">B</div>
+            <div>
+              <strong>Boven Image</strong>
+              <span>Media Vault</span>
+            </div>
           </div>
+          <button
+            type="button"
+            className="mobile-close-btn"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Tutup menu"
+          >
+            ×
+          </button>
         </div>
 
         <nav className="nav">
-          <a className="nav-item active" href="#library" onClick={(e)=>{e.preventDefault(); setFilterOrg(""); setFilterProg(""); load("","");}}><span>▦</span> Library</a>
-          <button className="nav-item" onClick={() => setShowUpload(true)}><span>＋</span> Upload</button>
+          <a
+            className={`nav-item ${!filterOrg && !filterProg ? "active" : ""}`}
+            href="#library"
+            onClick={(e) => {
+              e.preventDefault();
+              setFilterOrg("");
+              setFilterProg("");
+              load("", "");
+              setMobileMenuOpen(false);
+            }}
+          >
+            <span>▦</span> Library
+          </a>
+          <button
+            type="button"
+            className="nav-item"
+            onClick={() => {
+              setShowUpload(true);
+              setMobileMenuOpen(false);
+            }}
+          >
+            <span>＋</span> Upload Media
+          </button>
         </nav>
 
         <div className="sidebar-section">
-          <div className="sidebar-label">FOLDERS</div>
+          <div className="sidebar-label">FOLDER & PROGRAM</div>
           <div className="folder-tree">
             {folders.map((org: any) => (
               <div key={org.id} className="folder-org">
                 <button
-                  className={`folder-row ${filterOrg===org.id && !filterProg ? "active":""}`}
-                  onClick={()=>{
-                    const isOpen = expanded===org.id;
-                    setExpanded(isOpen? null : org.id);
-                    setFilterOrg(org.id); setFilterProg(""); load(org.id,"");
+                  type="button"
+                  className={`folder-row ${filterOrg === org.id && !filterProg ? "active" : ""}`}
+                  onClick={() => {
+                    const isOpen = expanded === org.id;
+                    setExpanded(isOpen ? null : org.id);
+                    setFilterOrg(org.id);
+                    setFilterProg("");
+                    load(org.id, "");
                   }}
                 >
-                  <span className="folder-chevron">{expanded===org.id ? "▾":"▸"}</span>
+                  <span className="folder-chevron">{expanded === org.id ? "▾" : "▸"}</span>
                   <span className="folder-icon">📁</span>
                   <span className="folder-name">{org.name}</span>
                   <span className="folder-count">{org.count}</span>
                 </button>
-                {expanded===org.id && (
+                {expanded === org.id && (
                   <div className="folder-programs">
-                    {org.programs?.length ? org.programs.map((p:any)=>(
-                      <button
-                        key={p.id}
-                        className={`folder-row sub ${filterProg===p.id ? "active":""}`}
-                        onClick={()=>{ setFilterProg(p.id); load(org.id,p.id); }}
-                      >
-                        <span className="folder-icon">📂</span>
-                        <span className="folder-name">{p.name}</span>
-                        <span className="folder-count">{p.count}</span>
-                      </button>
-                    )) : <div className="folder-empty">Belum ada program</div>}
+                    {org.programs?.length ? (
+                      org.programs.map((p: any) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          className={`folder-row sub ${filterProg === p.id ? "active" : ""}`}
+                          onClick={() => {
+                            setFilterProg(p.id);
+                            load(org.id, p.id);
+                            setMobileMenuOpen(false);
+                          }}
+                        >
+                          <span className="folder-icon">📂</span>
+                          <span className="folder-name">{p.name}</span>
+                          <span className="folder-count">{p.count}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="folder-empty">Belum ada program</div>
+                    )}
                   </div>
                 )}
               </div>
@@ -361,13 +412,28 @@ export default function VaultPage() {
           <div className="sidebar-label">WORKSPACE</div>
           <div className="workspace-card">
             <div className="workspace-dot" />
-            <div><strong>Boven Digoel</strong><span>{items.length} media</span></div>
+            <div>
+              <strong>Boven Digoel</strong>
+              <span>{items.length} media</span>
+            </div>
           </div>
         </div>
 
         <div className="sidebar-bottom">
-          <a className="nav-item" href="/lab"><span>⚙</span> Developer / Lab</a>
-          <a className="nav-item" href="/api/auth/login"><span>↗</span> Blogger Login</a>
+          <a
+            className="nav-item"
+            href="/lab"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <span>⚙</span> Developer / Lab
+          </a>
+          <a
+            className="nav-item"
+            href="/api/auth/login"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <span>↗</span> Blogger Login
+          </a>
         </div>
       </aside>
 
@@ -380,7 +446,25 @@ export default function VaultPage() {
               Katalog dokumentasi kegiatan Boven Digoel. Gambar pada galeri ditampilkan dalam resolusi pratinjau hemat kuota — untuk mendapatkan foto resolusi asli penuh, klik foto lalu gunakan tombol <strong>Salin URL Original</strong>.
             </p>
           </div>
-          <button className="primary-btn" onClick={() => setShowUpload(true)}>＋ Upload media</button>
+          <div className="topbar-actions">
+            <button
+              type="button"
+              className="mobile-sandwich-btn"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Buka Menu & Folder"
+            >
+              <span className="sandwich-icon">☰</span>
+              <span className="sandwich-text">Menu & Folder</span>
+              {folders.length > 0 && <span className="sandwich-badge">{folders.length}</span>}
+            </button>
+            <button
+              type="button"
+              className="primary-btn topbar-upload-btn"
+              onClick={() => setShowUpload(true)}
+            >
+              ＋ Upload media
+            </button>
+          </div>
         </header>
 
         <div className="toolbar">
@@ -756,6 +840,52 @@ export default function VaultPage() {
           </aside>
         </div>
       )}
+      {/* Floating Bottom Navigation Bar for Mobile */}
+      <nav className="mobile-floating-bar" aria-label="Navigasi cepat mobile">
+        <button
+          type="button"
+          className={`mobile-fab-btn ${!filterOrg && !filterProg && !mobileMenuOpen ? "active" : ""}`}
+          onClick={() => {
+            setFilterOrg("");
+            setFilterProg("");
+            load("", "");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
+          <span className="fab-icon">▦</span>
+          <small>Semua</small>
+        </button>
+        <button
+          type="button"
+          className={`mobile-fab-btn ${filterOrg || mobileMenuOpen ? "active" : ""}`}
+          onClick={() => setMobileMenuOpen(true)}
+        >
+          <span className="fab-icon">📁</span>
+          <small>Folder {folders.length ? `(${folders.length})` : ""}</small>
+        </button>
+        <button
+          type="button"
+          className="mobile-fab-btn fab-upload"
+          onClick={() => setShowUpload(true)}
+        >
+          <span className="fab-icon">＋</span>
+          <small>Upload</small>
+        </button>
+        <button
+          type="button"
+          className="mobile-fab-btn"
+          onClick={() => {
+            const searchEl = document.querySelector(".search-box input") as HTMLInputElement;
+            if (searchEl) {
+              searchEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              searchEl.focus();
+            }
+          }}
+        >
+          <span className="fab-icon">🔍</span>
+          <small>Cari</small>
+        </button>
+      </nav>
     </main>
   );
 }
