@@ -98,5 +98,26 @@ h1 { font-size:36px; letter-spacing:-1.5px; margin:5px 0 5px; }
 .copy-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:18px; }
 .copy-grid button { border:1px solid var(--line); background:#f8faf8; color:#4e5751; border-radius:9px; padding:10px; font-size:10px; font-weight:750; }
 .copy-grid button:hover { background:var(--accent-soft); color:var(--accent); border-color:#c7dfd0; }
-@media (max-width:900px) { .sidebar { width:72px; padding:20px 10px; } .brand { padding:0 0 25px; justify-content:center; } .brand > div:last-child,.nav-item:not(.active) { } .brand strong,.brand span,.sidebar-label,.workspace-card div:not(.workspace-dot) { display:none; } .nav-item { justify-content:center; padding:12px 8px; font-size:0; } .nav-item span { font-size:17px; } .workspace-card { justify-content:center; padding:14px 0; } .sidebar-bottom .nav-item { font-size:0; } .content { width:calc(100% - 72px); margin-left:72px; padding:30px 22px 60px; } .detail-panel { grid-template-columns:1fr; width:100%; } .detail-image { min-height:42vh; max-height:52vh; } }
+.folder-tree { display:grid; gap:2px; }
+.folder-row { width:100%; display:flex; align-items:center; gap:8px; padding:8px 10px; border:0; background:transparent; border-radius:9px; font-size:12px; color:#4d5550; text-align:left; }
+.folder-row:hover { background:#f2f5f2; }
+.folder-row.active { background:var(--accent-soft); color:var(--accent); font-weight:700; }
+.folder-row.sub { padding-left:28px; font-size:11px; }
+.folder-chevron { width:12px; font-size:10px; }
+.folder-icon { font-size:13px; }
+.folder-name { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.folder-count { font-size:10px; background:#eef2ee; padding:2px 6px; border-radius:999px; }
+.folder-row.active .folder-count { background:var(--accent); color:#fff; }
+.folder-programs { display:grid; gap:1px; padding-left:6px; margin-left:10px; border-left:1px dashed var(--line); }
+.folder-empty { padding:8px 10px; color:#9aa19b; font-size:10px; }
+.org-folder-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; margin-bottom:22px; }
+.org-folder-card { border:1px solid var(--line); background:#fff; border-radius:14px; overflow:hidden; text-align:left; padding:0; cursor:pointer; transition:.18s; }
+.org-folder-card:hover { transform:translateY(-2px); box-shadow:var(--shadow); }
+.org-cover { aspect-ratio:16/10; background:#edf0ed; overflow:hidden; }
+.org-cover img { width:100%; height:100%; object-fit:cover; display:block; }
+.org-cover-placeholder { width:100%; height:100%; display:grid; place-items:center; font-size:28px; color:#9aa19b; }
+.org-folder-info { padding:10px 12px; }
+.org-folder-info strong { display:block; font-size:12px; }
+.org-folder-info span { display:block; color:var(--muted); font-size:10px; margin-top:2px; }
+@media (max-width:900px) { .sidebar { width:72px; padding:20px 10px; } .brand { padding:0 0 25px; justify-content:center; } .brand > div:last-child,.nav-item:not(.active) { } .brand strong,.brand span,.sidebar-label,.workspace-card div:not(.workspace-dot) { display:none; } .nav-item { justify-content:center; padding:12px 8px; font-size:0; } .nav-item span { font-size:17px; } .workspace-card { justify-content:center; padding:14px 0; } .sidebar-bottom .nav-item { font-size:0; } .content { width:calc(100% - 72px); margin-left:72px; padding:30px 22px 60px; } .detail-panel { grid-template-columns:1fr; width:100%; } .detail-image { min-height:42vh; max-height:52vh; } .folder-tree,.org-folder-grid { display:none; } }
 @media (max-width:620px) { .content { padding:24px 14px 50px; } .topbar { align-items:flex-start; flex-direction:column; } h1 { font-size:30px; } .stats-row { grid-template-columns:1fr; } .toolbar { flex-wrap:wrap; } .search-box { flex-basis:100%; } .media-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; } .media-card { border-radius:11px; } .thumb-wrap { aspect-ratio:1/1; } .media-info { padding:8px; } .media-title { font-size:10px; } .media-meta { display:none; } .form-grid { grid-template-columns:1fr; } .form-grid .full { grid-column:auto; } .upload-modal { padding:16px; } .copy-grid { grid-template-columns:1fr; } }

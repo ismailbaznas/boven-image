@@ -34,10 +34,19 @@ export default function VaultPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [dragging, setDragging] = useState(false);
+  const [folders, setFolders] = useState<any[]>([]);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [filterOrg, setFilterOrg] = useState("");
+  const [filterProg, setFilterProg] = useState("");
 
-  async function load() {
+  async function load(org?: string, prog?: string) {
     try {
-      const r = await fetch(`/api/vault/media?q=${encodeURIComponent(q)}`);
+      const o = org ?? filterOrg;
+      const p = prog ?? filterProg;
+      const params = new URLSearchParams({ q, limit: "50" });
+      if (o) params.set("org", o);
+      if (p) params.set("prog", p);
+      const r = await fetch(`/api/vault/media?${params.toString()}`);
       const j = await r.json();
       setItems(j.data || []);
       if (j.error) setLog(j.error + (j.hint ? "\n" + j.hint : ""));
@@ -46,8 +55,17 @@ export default function VaultPage() {
     }
   }
 
+  async function loadFolders() {
+    try {
+      const r = await fetch("/api/vault/folders");
+      const j = await r.json();
+      setFolders(j.data || []);
+    } catch {}
+  }
+
   useEffect(() => {
     load();
+    loadFolders();
   }, []);
 
   async function uploadFiles(fileList: FileList | File[]) {
@@ -67,7 +85,7 @@ export default function VaultPage() {
       if (j.success) {
         setShowUpload(false);
         setForm(emptyForm);
-        await load();
+        await Promise.all([load(), loadFolders()]);
       }
     } catch (error) {
       setLog(error instanceof Error ? error.message : "Upload gagal");
@@ -92,6 +110,8 @@ export default function VaultPage() {
     return Array.from(new Set(values));
   }, [items]);
 
+  const displayItems = !filterOrg && !q ? items.slice(0, 8) : items;
+
   return (
     <main className="vault-shell">
       <aside className="sidebar">
@@ -104,10 +124,48 @@ export default function VaultPage() {
         </div>
 
         <nav className="nav">
-          <a className="nav-item active" href="#library"><span>▦</span> Library</a>
-          <a className="nav-item" href="#collections"><span>◈</span> Collections</a>
+          <a className="nav-item active" href="#library" onClick={(e)=>{e.preventDefault(); setFilterOrg(""); setFilterProg(""); load("","");}}><span>▦</span> Library</a>
           <button className="nav-item" onClick={() => setShowUpload(true)}><span>＋</span> Upload</button>
         </nav>
+
+        <div className="sidebar-section">
+          <div className="sidebar-label">FOLDERS</div>
+          <div className="folder-tree">
+            {folders.map((org: any) => (
+              <div key={org.id} className="folder-org">
+                <button
+                  className={`folder-row ${filterOrg===org.id && !filterProg ? "active":""}`}
+                  onClick={()=>{
+                    const isOpen = expanded===org.id;
+                    setExpanded(isOpen? null : org.id);
+                    setFilterOrg(org.id); setFilterProg(""); load(org.id,"");
+                  }}
+                >
+                  <span className="folder-chevron">{expanded===org.id ? "▾":"▸"}</span>
+                  <span className="folder-icon">📁</span>
+                  <span className="folder-name">{org.name}</span>
+                  <span className="folder-count">{org.count}</span>
+                </button>
+                {expanded===org.id && (
+                  <div className="folder-programs">
+                    {org.programs?.length ? org.programs.map((p:any)=>(
+                      <button
+                        key={p.id}
+                        className={`folder-row sub ${filterProg===p.id ? "active":""}`}
+                        onClick={()=>{ setFilterProg(p.id); load(org.id,p.id); }}
+                      >
+                        <span className="folder-icon">📂</span>
+                        <span className="folder-name">{p.name}</span>
+                        <span className="folder-count">{p.count}</span>
+                      </button>
+                    )) : <div className="folder-empty">Belum ada program</div>}
+                  </div>
+                )}
+              </div>
+            ))}
+            {!folders.length && <div className="folder-empty">Memuat folders...</div>}
+          </div>
+        </div>
 
         <div className="sidebar-section">
           <div className="sidebar-label">WORKSPACE</div>
@@ -137,9 +195,9 @@ export default function VaultPage() {
           <div className="search-box">
             <span>⌕</span>
             <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && load()} placeholder="Cari ID, nama file, program..." />
-            {q && <button onClick={() => { setQ(""); load(); }}>×</button>}
+            {q && <button onClick={() => { setQ(""); load("",""); }}>×</button>}
           </div>
-          <button className="ghost-btn" onClick={load}>↻ Refresh</button>
+          <button className="ghost-btn" onClick={() => load()}>↻ Refresh</button>
           <div className="media-count">{items.length} media</div>
         </div>
 
@@ -149,12 +207,41 @@ export default function VaultPage() {
           <div className="stat-card"><span>Storage</span><strong>Blogger</strong><small>Supabase menyimpan katalog</small></div>
         </div>
 
+        {!filterOrg && !q && (
+          <div className="section-heading">
+            <div><h2>Organisasi</h2><span>Folder organisasi — klik untuk buka program</span></div>
+          </div>
+        )}
+        {!filterOrg && !q && (
+          <div className="org-folder-grid">
+            {folders.map((org:any)=>(
+              <button key={org.id} className="org-folder-card" onClick={()=>{ setExpanded(org.id); setFilterOrg(org.id); setFilterProg(""); load(org.id,""); }}>
+                <div className="org-cover">
+                  {org.cover ? <img src={bloggerVariant(org.cover,"card")} alt={org.name} loading="lazy" /> : <div className="org-cover-placeholder">📁</div>}
+                </div>
+                <div className="org-folder-info">
+                  <strong>{org.name}</strong>
+                  <span>{org.count} media • {org.programs?.length||0} program</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {!filterOrg && !q && items.length>0 && (
+          <div className="section-heading">
+            <div><h2>Terbaru</h2><span>6-10 gambar terbaru</span></div>
+            <button className="ghost-btn" onClick={()=>{ setFilterOrg(""); setFilterProg(""); load("",""); }}>Lihat semua →</button>
+          </div>
+        )}
+
         <div className="section-heading" id="collections">
-          <div><h2>All media</h2><span>Terbaru ditampilkan lebih dulu</span></div>
+          <div><h2>{filterProg ? folders.find((o:any)=>o.id===filterOrg)?.programs?.find((p:any)=>p.id===filterProg)?.name : filterOrg ? folders.find((o:any)=>o.id===filterOrg)?.name : "All media"}</h2><span>{filterOrg || q ? `${items.length} hasil` : "Terbaru ditampilkan lebih dulu"}</span></div>
+          {(filterOrg || filterProg) && <button className="ghost-btn" onClick={()=>{ setFilterOrg(""); setFilterProg(""); load("",""); }}>← Semua organisasi</button>}
         </div>
 
         <div className="media-grid">
-          {items.map((m) => {
+          {displayItems.map((m) => {
             const thumb = bloggerVariant(m.blogger_url, "card");
             const thumbSmall = bloggerVariant(m.blogger_url, "thumb");
             return (

@@ -4,16 +4,20 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.toLowerCase() || "";
+  const org = req.nextUrl.searchParams.get("org") || "";
+  const prog = req.nextUrl.searchParams.get("prog") || "";
   const limit = Math.min(Number(req.nextUrl.searchParams.get("limit") || "50"), 100);
   try {
     const sb = createPublicSupabase();
     let query = sb.from("media").select("*").order("created_at", { ascending: false }).limit(limit);
     if (q) query = query.or(`id.ilike.%${q}%,filename.ilike.%${q}%,title.ilike.%${q}%`);
+    if (org) query = query.eq("organization_id", org);
+    if (prog) query = query.eq("program_id", prog);
     const { data, error } = await query;
     if (error) throw error;
     return NextResponse.json({ data: data || [] });
   } catch (e: any) {
-    return NextResponse.json({ data: [], error: e.message, hint: "Jalankan supabase/media.sql di Supabase SQL Editor dulu" });
+    return NextResponse.json({ data: [], error: e.message, hint: "Jalankan supabase/002_normalize_folders.sql" });
   }
 }
 
