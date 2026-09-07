@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import "./vault.css";
 import { bloggerSrcSet, bloggerVariant } from "@/lib/image";
+import { slugify } from "@/lib/slug";
 
 type Media = {
   id: string;
@@ -13,16 +14,17 @@ type Media = {
   hash: string;
   created_at: string;
   metadata: any;
+  organization_id?: string;
+  program_id?: string;
   width: number;
   height: number;
 };
 
 const emptyForm = {
-  program: "Penyaluran Fidyah Tahap 3",
-  tanggal: "2026-09-06",
+  organisasi: "",
+  program: "",
   lokasi: "Tanah Merah",
-  organisasi: "BAZNAS Kabupaten Boven Digoel",
-  idPrefix: "BDG-2026-FDY",
+  tanggal: "2026-09-06",
 };
 
 export default function VaultPage() {
@@ -38,6 +40,7 @@ export default function VaultPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [filterOrg, setFilterOrg] = useState("");
   const [filterProg, setFilterProg] = useState("");
+  const [settingCover, setSettingCover] = useState(false);
 
   async function load(org?: string, prog?: string) {
     try {
@@ -105,10 +108,62 @@ export default function VaultPage() {
     navigator.clipboard.writeText(text);
   }
 
+  async function handleSetCover(media: Media) {
+    const orgId = media.organization_id || slugify(media.metadata?.organisasi || "");
+    if (!orgId) return alert("Organisasi tidak ditemukan");
+
+    const currentOrg = folders.find((o: any) => o.id === orgId);
+    const isAlreadyCover = currentOrg?.cover_media_id === media.id;
+    const newMediaId = isAlreadyCover ? null : media.id;
+
+    setSettingCover(true);
+    try {
+      const r = await fetch("/api/vault/folders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ org_id: orgId, media_id: newMediaId }),
+      });
+      const j = await r.json();
+      if (j.success) {
+        await loadFolders();
+      } else {
+        alert("Gagal mengatur sampul: " + (j.error || ""));
+      }
+    } catch (error: any) {
+      alert("Error: " + error.message);
+    } finally {
+      setSettingCover(false);
+    }
+  }
+
+  const isCurrentCover = useMemo(() => {
+    if (!selected) return false;
+    const orgId = selected.organization_id || slugify(selected.metadata?.organisasi || "");
+    const org = folders.find((o: any) => o.id === orgId);
+    return org?.cover_media_id === selected.id;
+  }, [folders, selected]);
+
   const programs = useMemo(() => {
     const values = items.map((m) => m.metadata?.program).filter(Boolean);
     return Array.from(new Set(values));
   }, [items]);
+
+  const availablePrograms = useMemo(() => {
+    if (!form.organisasi) {
+      const allProgs = folders.flatMap((o: any) => o.programs || []);
+      return Array.from(new Set(allProgs.map((p: any) => p.name)));
+    }
+    const matchedOrg = folders.find(
+      (o: any) =>
+        o.id === slugify(form.organisasi) ||
+        o.name.toLowerCase() === form.organisasi.trim().toLowerCase()
+    );
+    if (matchedOrg?.programs?.length) {
+      return matchedOrg.programs.map((p: any) => p.name);
+    }
+    const allProgs = folders.flatMap((o: any) => o.programs || []);
+    return Array.from(new Set(allProgs.map((p: any) => p.name)));
+  }, [folders, form.organisasi]);
 
   const displayItems = !filterOrg && !q ? items.slice(0, 8) : items;
 
@@ -201,10 +256,21 @@ export default function VaultPage() {
           <div className="media-count">{items.length} media</div>
         </div>
 
-        <div className="stats-row">
-          <div className="stat-card"><span>Total media</span><strong>{items.length}</strong><small>terdaftar di katalog</small></div>
-          <div className="stat-card"><span>Program</span><strong>{programs.length}</strong><small>koleksi teridentifikasi</small></div>
-          <div className="stat-card"><span>Storage</span><strong>Blogger</strong><small>Supabase menyimpan katalog</small></div>
+        <div className="stats-strip">
+          <div className="stat-item">
+            <span className="stat-label">Total</span>
+            <strong className="stat-value">{items.length} <small>Media</small></strong>
+          </div>
+          <div className="stat-divider" />
+          <div className="stat-item">
+            <span className="stat-label">Program</span>
+            <strong className="stat-value">{programs.length} <small>Koleksi</small></strong>
+          </div>
+          <div className="stat-divider" />
+          <div className="stat-item">
+            <span className="stat-label">Storage</span>
+            <strong className="stat-value"><span className="status-dot" />Blogger</strong>
+          </div>
         </div>
 
         {!filterOrg && !q && (
@@ -217,7 +283,7 @@ export default function VaultPage() {
             {folders.map((org:any)=>(
               <button key={org.id} className="org-folder-card" onClick={()=>{ setExpanded(org.id); setFilterOrg(org.id); setFilterProg(""); load(org.id,""); }}>
                 <div className="org-cover">
-                  {org.cover ? <img src={bloggerVariant(org.cover,"card")} alt={org.name} loading="lazy" /> : <div className="org-cover-placeholder">📁</div>}
+                  {org.cover ? <img src={bloggerVariant(org.cover,"thumb")} alt={org.name} loading="lazy" /> : <div className="org-cover-placeholder">📁</div>}
                 </div>
                 <div className="org-folder-info">
                   <strong>{org.name}</strong>
@@ -248,9 +314,9 @@ export default function VaultPage() {
             <article className="media-card" key={m.id} onClick={() => setSelected(m)}>
               <div className="thumb-wrap">
                 <img
-                  src={thumb}
-                  srcSet={`${thumbSmall} 320w, ${thumb} 640w`}
-                  sizes="(max-width: 768px) 50vw, 240px"
+                  src={thumbSmall}
+                  srcSet={`${thumbSmall} 200w, ${thumb} 320w`}
+                  sizes="(max-width: 620px) 180px, 240px"
                   alt={m.title || m.filename}
                   loading="lazy"
                   decoding="async"
@@ -258,7 +324,7 @@ export default function VaultPage() {
                 <div className="thumb-overlay"><span>View details</span></div>
               </div>
               <div className="media-info">
-                <div className="media-id">{m.id}</div>
+                <div className="media-id">{m.organization_id || slugify(m.metadata?.organisasi || "boven-digoel")}</div>
                 <div className="media-title">{m.title || m.filename}</div>
                 <div className="media-meta">
                   <span>{m.metadata?.program || "Tanpa program"}</span>
@@ -294,11 +360,54 @@ export default function VaultPage() {
               </div>
 
               <div className="form-grid">
-                <label>Program<input value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} /></label>
-                <label>Tanggal<input type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} /></label>
-                <label>Lokasi<input value={form.lokasi} onChange={(e) => setForm({ ...form, lokasi: e.target.value })} /></label>
-                <label>Organisasi<input value={form.organisasi} onChange={(e) => setForm({ ...form, organisasi: e.target.value })} /></label>
-                <label className="full">ID Prefix<input value={form.idPrefix} onChange={(e) => setForm({ ...form, idPrefix: e.target.value })} /></label>
+                <label>
+                  Organisasi
+                  <input
+                    list="org-datalist"
+                    value={form.organisasi}
+                    onChange={(e) => setForm({ ...form, organisasi: e.target.value })}
+                    onFocus={(e) => { if (e.target.value) e.target.select(); }}
+                    placeholder="Pilih list atau ketik manual..."
+                    autoComplete="off"
+                  />
+                  <datalist id="org-datalist">
+                    {folders.map((o: any) => (
+                      <option key={o.id} value={o.name} />
+                    ))}
+                  </datalist>
+                </label>
+                <label>
+                  Program
+                  <input
+                    list="prog-datalist"
+                    value={form.program}
+                    onChange={(e) => setForm({ ...form, program: e.target.value })}
+                    onFocus={(e) => { if (e.target.value) e.target.select(); }}
+                    placeholder="Pilih list atau ketik manual..."
+                    autoComplete="off"
+                  />
+                  <datalist id="prog-datalist">
+                    {availablePrograms.map((pName: string) => (
+                      <option key={pName} value={pName} />
+                    ))}
+                  </datalist>
+                </label>
+                <label>
+                  Lokasi
+                  <input
+                    value={form.lokasi}
+                    onChange={(e) => setForm({ ...form, lokasi: e.target.value })}
+                    placeholder="Contoh: Tanah Merah"
+                  />
+                </label>
+                <label>
+                  Tanggal
+                  <input
+                    type="date"
+                    value={form.tanggal}
+                    onChange={(e) => setForm({ ...form, tanggal: e.target.value })}
+                  />
+                </label>
               </div>
               {log && <pre className="upload-log">{log}</pre>}
               <div className="modal-actions"><button type="button" className="ghost-btn" onClick={() => setShowUpload(false)}>Batal</button><button className="primary-btn" disabled={loading}>{loading ? "Mengupload..." : "Upload ke Blogger"}</button></div>
@@ -323,12 +432,27 @@ export default function VaultPage() {
               <div className="modal-header"><div><div className="eyebrow">MEDIA DETAIL</div><h2>{selected.id}</h2></div><button className="close-btn" onClick={() => setSelected(null)}>×</button></div>
               <h3>{selected.title || selected.filename}</h3>
               <dl className="details">
+                <div><dt>Organisasi</dt><dd>{selected.organization_id || selected.metadata?.organisasi || "—"}</dd></div>
                 <div><dt>Program</dt><dd>{selected.metadata?.program || "—"}</dd></div>
                 <div><dt>Tanggal</dt><dd>{selected.metadata?.tanggal || new Date(selected.created_at).toLocaleDateString("id-ID")}</dd></div>
                 <div><dt>Lokasi</dt><dd>{selected.metadata?.lokasi || "—"}</dd></div>
                 <div><dt>Hash SHA-256</dt><dd className="mono">{selected.hash}</dd></div>
                 <div><dt>Blogger URL</dt><dd className="mono break">{selected.blogger_url}</dd></div>
               </dl>
+              <div className="cover-action-wrap">
+                <button
+                  type="button"
+                  className={`cover-btn ${isCurrentCover ? "active-cover" : ""}`}
+                  disabled={settingCover}
+                  onClick={() => handleSetCover(selected)}
+                >
+                  {settingCover
+                    ? "Menyimpan sampul..."
+                    : isCurrentCover
+                    ? "✓ Sampul Organisasi Aktif (Klik untuk lepas)"
+                    : "🖼 Jadikan Sampul Organisasi"}
+                </button>
+              </div>
               <div className="copy-grid">
                 <button onClick={() => copy(selected.blogger_url)}>Copy URL</button>
                 <button onClick={() => copy(`![${selected.title}](${selected.blogger_url})`)}>Copy Markdown</button>

@@ -9,8 +9,31 @@ export function slugify(input: string): string {
     .replace(/-+/g, "-");
 }
 
+export function buildBovenDigoelId(seq: number): string {
+  return `boven-digoel-${seq}`;
+}
+
+export function buildDescriptiveFilename(
+  originalFileName: string,
+  organisasi: string,
+  program: string,
+  id: string
+): string {
+  const parts = originalFileName.split(".");
+  const ext = parts.length > 1 ? parts.pop()!.toLowerCase() : "jpg";
+  const baseName = slugify(parts.join("."));
+
+  const orgSlug = slugify(organisasi);
+  const progSlug = slugify(program);
+  const idSlug = slugify(id);
+
+  // jika file bernama 'rumah.jpg', organisasi='BAZNAS Boven Digoel', program='Pembagian Zakat Fitrah', id='boven-digoel1'
+  // hasil: rumah-baznas-boven-digoel-pembagian-zakat-fitrah-boven-digoel1.jpg
+  const segments = [baseName, orgSlug, progSlug, idSlug].filter(Boolean);
+  return `${segments.join("-")}.${ext}`;
+}
+
 export function buildMediaId(title: string, orgSlug: string, seq: number): string {
-  // pembagian-zakat-fitrah-baznas-boven-digoel-001
   const t = slugify(title);
   const o = slugify(orgSlug);
   return `${t}-${o}-${String(seq).padStart(3, "0")}`;
