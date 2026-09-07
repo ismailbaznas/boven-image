@@ -20,12 +20,80 @@ type Media = {
   height: number;
 };
 
+type UploadProgress = {
+  current: number;
+  total: number;
+  filename: string;
+  percent: number;
+  statusText: string;
+};
+
+const getTodayDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const emptyForm = {
   organisasi: "",
   program: "",
   lokasi: "Tanah Merah",
-  tanggal: "2026-09-06",
+  tanggal: getTodayDate(),
 };
+
+function StagedFileItem({
+  file,
+  onRemove,
+  disabled,
+}: {
+  file: File;
+  onRemove: () => void;
+  disabled: boolean;
+}) {
+  const [thumbUrl, setThumbUrl] = useState<string>("");
+
+  useEffect(() => {
+    let url = "";
+    try {
+      url = URL.createObjectURL(file);
+      setThumbUrl(url);
+    } catch {}
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [file]);
+
+  const sizeKb = (file.size / 1024).toFixed(0);
+  const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+  const sizeDisplay = file.size > 1024 * 1024 ? `${sizeMb} MB` : `${sizeKb} KB`;
+
+  return (
+    <div className="staged-item">
+      <div className="staged-thumb-wrap">
+        {thumbUrl ? (
+          <img src={thumbUrl} alt={file.name} className="staged-thumb" />
+        ) : (
+          <div className="staged-thumb-fallback">🖼</div>
+        )}
+      </div>
+      <div className="staged-info">
+        <span className="staged-filename" title={file.name}>{file.name}</span>
+        <span className="staged-filesize">{sizeDisplay}</span>
+      </div>
+      <button
+        type="button"
+        className="staged-remove-btn"
+        onClick={onRemove}
+        disabled={disabled}
+        title="Hapus foto ini"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
 
 export default function VaultPage() {
   const [items, setItems] = useState<Media[]>([]);
@@ -41,6 +109,8 @@ export default function VaultPage() {
   const [filterOrg, setFilterOrg] = useState("");
   const [filterProg, setFilterProg] = useState("");
   const [settingCover, setSettingCover] = useState(false);
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
 
   async function load(org?: string, prog?: string) {
     try {
@@ -71,37 +141,102 @@ export default function VaultPage() {
     loadFolders();
   }, []);
 
-  async function uploadFiles(fileList: FileList | File[]) {
-    const files = Array.from(fileList).filter((f) => f.size > 0 && f.type.startsWith("image/"));
-    if (!files.length) return;
+  function addFiles(fileList: FileList | File[]) {
+    const valid = Array.from(fileList).filter((f) => f.size > 0 && f.type.startsWith("image/"));
+    if (!valid.length) return;
 
-    const fd = new FormData();
-    files.forEach((file) => fd.append("files", file));
-    Object.entries(form).forEach(([key, value]) => fd.set(key, value));
+    setStagedFiles((prev) => {
+      const existingKeys = new Set(prev.map((f) => `${f.name}-${f.size}-${f.lastModified}`));
+      const uniqueIncoming = valid.filter(
+        (f) => !existingKeys.has(`${f.name}-${f.size}-${f.lastModified}`)
+      );
+      return [...prev, ...uniqueIncoming];
+    });
+  }
+
+  function removeStagedFile(index: number) {
+    setStagedFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function startBatchUpload(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!stagedFiles.length) {
+      alert("Silakan pilih minimal 1 foto terlebih dahulu.");
+      return;
+    }
 
     setLoading(true);
     setLog("");
-    try {
-      const r = await fetch("/api/vault/upload", { method: "POST", body: fd });
-      const j = await r.json();
-      setLog(JSON.stringify(j, null, 2));
-      if (j.success) {
-        setShowUpload(false);
-        setForm(emptyForm);
-        await Promise.all([load(), loadFolders()]);
-      }
-    } catch (error) {
-      setLog(error instanceof Error ? error.message : "Upload gagal");
-    } finally {
-      setLoading(false);
-    }
-  }
 
-  async function doUpload(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const input = e.currentTarget.elements.namedItem("files") as HTMLInputElement | null;
-    if (!input?.files?.length) return alert("Pilih minimal 1 foto");
-    await uploadFiles(input.files);
+    let successCount = 0;
+    let failCount = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < stagedFiles.length; i++) {
+      const file = stagedFiles[i];
+      const currentNum = i + 1;
+      const currentPercent = Math.round((i / stagedFiles.length) * 100);
+
+      setUploadProgress({
+        current: currentNum,
+        total: stagedFiles.length,
+        filename: file.name,
+        percent: currentPercent,
+        statusText: `Mengupload ${currentNum} dari ${stagedFiles.length}: ${file.name}...`,
+      });
+
+      try {
+        const fd = new FormData();
+        fd.append("files", file);
+        fd.set("organisasi", form.organisasi);
+        fd.set("program", form.program);
+        fd.set("lokasi", form.lokasi);
+        fd.set("tanggal", form.tanggal);
+
+        const res = await fetch("/api/vault/upload", {
+          method: "POST",
+          body: fd,
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          successCount += 1;
+        } else {
+          failCount += 1;
+          errors.push(`${file.name}: ${data.error || "Gagal upload"}`);
+        }
+      } catch (err: any) {
+        failCount += 1;
+        errors.push(`${file.name}: ${err.message || "Koneksi terputus"}`);
+      }
+
+      setUploadProgress({
+        current: currentNum,
+        total: stagedFiles.length,
+        filename: file.name,
+        percent: Math.round((currentNum / stagedFiles.length) * 100),
+        statusText:
+          currentNum === stagedFiles.length
+            ? "Selesai memproses semua foto!"
+            : `Mengupload ${currentNum + 1} dari ${stagedFiles.length}...`,
+      });
+    }
+
+    setLoading(false);
+
+    if (failCount === 0) {
+      setLog(`Berhasil mengupload ${successCount} foto ke Blogger & Supabase.`);
+      setStagedFiles([]);
+      setUploadProgress(null);
+      setShowUpload(false);
+      await Promise.all([load(), loadFolders()]);
+    } else {
+      setLog(
+        `Selesai: ${successCount} berhasil, ${failCount} gagal:\n` +
+          errors.map((err) => `• ${err}`).join("\n")
+      );
+      await Promise.all([load(), loadFolders()]);
+    }
   }
 
   function copy(text: string) {
@@ -239,9 +374,11 @@ export default function VaultPage() {
       <section className="content" id="library">
         <header className="topbar">
           <div>
-            <div className="eyebrow">MEDIA LIBRARY</div>
-            <h1>Library</h1>
-            <p>Kelola dan temukan seluruh arsip visual Boven Digoel.</p>
+            <div className="eyebrow">ARSIP VISUAL RESMI</div>
+            <h1>Media Vault</h1>
+            <p className="topbar-desc">
+              Katalog dokumentasi kegiatan Boven Digoel. Gambar pada galeri ditampilkan dalam resolusi pratinjau hemat kuota — untuk mendapatkan foto resolusi asli penuh, klik foto lalu gunakan tombol <strong>Salin URL Original</strong>.
+            </p>
           </div>
           <button className="primary-btn" onClick={() => setShowUpload(true)}>＋ Upload media</button>
         </header>
@@ -348,16 +485,115 @@ export default function VaultPage() {
       </section>
 
       {showUpload && (
-        <div className="modal-backdrop" onClick={() => !loading && setShowUpload(false)}>
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            if (!loading) {
+              setShowUpload(false);
+              setStagedFiles([]);
+              setUploadProgress(null);
+            }
+          }}
+        >
           <div className="upload-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><div><div className="eyebrow">NEW MEDIA</div><h2>Upload batch</h2></div><button className="close-btn" onClick={() => setShowUpload(false)}>×</button></div>
-            <form onSubmit={doUpload}>
-              <div className={`dropzone ${dragging ? "dragging" : ""}`} onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(e) => { e.preventDefault(); setDragging(false); if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files); }}>
-                <div className="upload-icon">↑</div>
-                <strong>Tarik foto ke sini</strong>
-                <span>atau pilih file dari komputer • bisa multi-upload</span>
-                <label className="secondary-btn">Pilih foto<input type="file" name="files" multiple accept="image/*" hidden /></label>
+            <div className="modal-header">
+              <div>
+                <div className="eyebrow">NEW MEDIA</div>
+                <h2>Upload Batch</h2>
               </div>
+              <button
+                type="button"
+                className="close-btn"
+                disabled={loading}
+                onClick={() => {
+                  setShowUpload(false);
+                  setStagedFiles([]);
+                  setUploadProgress(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={startBatchUpload}>
+              {stagedFiles.length === 0 ? (
+                <div
+                  className={`dropzone ${dragging ? "dragging" : ""}`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragging(true);
+                  }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragging(false);
+                    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+                  }}
+                >
+                  <div className="upload-icon">↑</div>
+                  <strong>Tarik & lepas foto ke sini</strong>
+                  <span>atau pilih file dari komputer • mendukung banyak foto</span>
+                  <label className="secondary-btn">
+                    📁 Pilih Foto dari Komputer
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      hidden
+                      onChange={(e) => {
+                        if (e.target.files) addFiles(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="staged-box">
+                  <div className="staged-box-header">
+                    <div className="staged-box-title">
+                      <strong>📷 {stagedFiles.length} foto terpilih</strong>
+                      <span className="staged-total-size">
+                        (Total {(stagedFiles.reduce((acc, f) => acc + f.size, 0) / (1024 * 1024)).toFixed(2)} MB)
+                      </span>
+                    </div>
+                    <div className="staged-box-actions">
+                      <label className="staged-add-btn">
+                        ＋ Tambah
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          hidden
+                          disabled={loading}
+                          onChange={(e) => {
+                            if (e.target.files) addFiles(e.target.files);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="staged-clear-btn"
+                        disabled={loading}
+                        onClick={() => setStagedFiles([])}
+                      >
+                        Bersihkan
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="staged-list">
+                    {stagedFiles.map((file, idx) => (
+                      <StagedFileItem
+                        key={`${file.name}-${file.size}-${idx}`}
+                        file={file}
+                        disabled={loading}
+                        onRemove={() => removeStagedFile(idx)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="form-grid">
                 <label>
@@ -366,9 +602,12 @@ export default function VaultPage() {
                     list="org-datalist"
                     value={form.organisasi}
                     onChange={(e) => setForm({ ...form, organisasi: e.target.value })}
-                    onFocus={(e) => { if (e.target.value) e.target.select(); }}
+                    onFocus={(e) => {
+                      if (e.target.value) e.target.select();
+                    }}
                     placeholder="Pilih list atau ketik manual..."
                     autoComplete="off"
+                    disabled={loading}
                   />
                   <datalist id="org-datalist">
                     {folders.map((o: any) => (
@@ -382,9 +621,12 @@ export default function VaultPage() {
                     list="prog-datalist"
                     value={form.program}
                     onChange={(e) => setForm({ ...form, program: e.target.value })}
-                    onFocus={(e) => { if (e.target.value) e.target.select(); }}
+                    onFocus={(e) => {
+                      if (e.target.value) e.target.select();
+                    }}
                     placeholder="Pilih list atau ketik manual..."
                     autoComplete="off"
+                    disabled={loading}
                   />
                   <datalist id="prog-datalist">
                     {availablePrograms.map((pName: string) => (
@@ -398,6 +640,7 @@ export default function VaultPage() {
                     value={form.lokasi}
                     onChange={(e) => setForm({ ...form, lokasi: e.target.value })}
                     placeholder="Contoh: Tanah Merah"
+                    disabled={loading}
                   />
                 </label>
                 <label>
@@ -406,11 +649,61 @@ export default function VaultPage() {
                     type="date"
                     value={form.tanggal}
                     onChange={(e) => setForm({ ...form, tanggal: e.target.value })}
+                    disabled={loading}
                   />
                 </label>
               </div>
+
+              {uploadProgress && (
+                <div className="upload-progress-card">
+                  <div className="progress-header">
+                    <span className="progress-status">{uploadProgress.statusText}</span>
+                    <span className="progress-percent">{uploadProgress.percent}%</span>
+                  </div>
+                  <div className="progress-track">
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${uploadProgress.percent}%` }}
+                    />
+                  </div>
+                  <div className="progress-sub">
+                    <span>
+                      File: <strong>{uploadProgress.filename}</strong>
+                    </span>
+                    <span>
+                      {uploadProgress.current} / {uploadProgress.total}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {log && <pre className="upload-log">{log}</pre>}
-              <div className="modal-actions"><button type="button" className="ghost-btn" onClick={() => setShowUpload(false)}>Batal</button><button className="primary-btn" disabled={loading}>{loading ? "Mengupload..." : "Upload ke Blogger"}</button></div>
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={loading}
+                  onClick={() => {
+                    setShowUpload(false);
+                    setStagedFiles([]);
+                    setUploadProgress(null);
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="primary-btn"
+                  disabled={loading || stagedFiles.length === 0}
+                >
+                  {loading
+                    ? `Mengupload (${uploadProgress?.current || 0}/${stagedFiles.length})...`
+                    : stagedFiles.length > 0
+                    ? `🚀 Upload ${stagedFiles.length} Foto ke Blogger`
+                    : "Pilih foto dulu"}
+                </button>
+              </div>
             </form>
           </div>
         </div>

@@ -8,8 +8,30 @@ Dokumen ini mencatat riwayat tahapan perbaikan pada aplikasi **Media Vault (Bove
 
 | Checkpoint | Commit Ref / Hash | Deskripsi Singkat |
 |---|---|---|
-| **Baseline (Sebelum Tahap 1)** | `2ff8c39` | Normalisasi folder organisasi/program, sidebar 1-expand, Blogger resumable upload |
-| **Tahap 1 (Selesai)** | *Pending commit* | Input field dipermudah (datalist org & prog), ID `boven-digoel[N]`, filename `[file]-[org]-[prog]-[id].[ext]` |
+| **Baseline (Awal)** | `2ff8c39` | Normalisasi folder organisasi/program, sidebar 1-expand, Blogger resumable upload |
+| **Tahap 1 (Selesai)** | `69aa5d4` | Input field dipermudah (datalist org & prog), ID `boven-digoel-[N]`, filename `[file]-[org]-[prog]-[id].[ext]`, sampul folder manual, mobile compact |
+| **Tahap 2 (Selesai)** | *Pending commit* | Multi-file staging preview, progressive batch uploader dengan live progress bar, bebas timeout serverless |
+
+---
+
+## 🚀 TAHAP 2 — Multi-File Staging & Progressive Batch Upload
+
+### 1. Masalah Batch Sebelumnya
+- Saat memilih beberapa foto, tidak ada antarmuka staging/preview yang menampilkan file apa saja yang sudah dipilih sebelum diupload.
+- Jika 5–10 foto dikirim dalam 1 request HTTP sekaligus, total payload bisa melebihi batas 4.5 MB Serverless Vercel (`413 Payload Too Large`) atau terkena timeout eksekusi 10 detik.
+
+### 2. Solusi & Perubahan Baru (`app/page.tsx` & `app/vault.css`)
+- **Staging Preview Interaktif:**
+  - File yang dipilih atau di-drag & drop otomatis masuk ke daftar antrean upload (`stagedFiles`).
+  - Menampilkan jumlah file, ukuran total, nama file, dan tombol hapus (✕) per file jika ada yang salah pilih.
+  - Terdapat tombol `+ Tambah foto lagi` untuk menambahkan foto secara bertahap.
+- **Progressive Batch Processing (Client Loop):**
+  - Setiap foto dikirim dalam request HTTP individual yang ringan (~1-2 detik per foto).
+  - Tidak akan pernah terkena limit ukuran 4.5 MB atau timeout 10 detik di Vercel.
+  - **Live Progress Indicator:** Menampilkan persentase dan nama file yang sedang aktif diproses (misal: `Mengupload 4 dari 10 foto (40%) — rumah.jpg`).
+  - Jika salah satu file gagal, proses tetap berlanjut untuk file lainnya dengan laporan status yang jelas.
+- **Header & Keterangan Resolusi Asli:**
+  - Judul header diperjelas menjadi **Media Vault** dengan subteks informatif bahwa gambar di katalog adalah pratinjau hemat kuota, dan untuk mengunduh resolusi asli penuh dapat menggunakan fitur **Salin URL Original**.
 
 ---
 
@@ -79,14 +101,14 @@ Dokumen ini mencatat riwayat tahapan perbaikan pada aplikasi **Media Vault (Bove
 
 ## ⏪ Panduan Rollback ke Checkpoint Sebelumnya
 
-Jika terjadi masalah kritis pada Tahap 1 dan ingin mengembalikan kode ke kondisi sebelum Tahap 1:
+Jika terjadi masalah kritis pada Tahap 2 dan ingin mengembalikan kode ke kondisi sebelum Tahap 2:
 
 ```bash
 # 1. Cek riwayat commit
 git log --oneline -5
 
-# 2. Rollback kode ke commit baseline (2ff8c39)
-git reset --hard 2ff8c39
+# 2. Rollback kode ke commit baseline Tahap 1 (69aa5d4)
+git reset --hard 69aa5d4
 
 # 3. Verifikasi build lokal
 npm run build
