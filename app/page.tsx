@@ -129,6 +129,29 @@ export default function VaultPage() {
   const [optimizingProgress, setOptimizingProgress] = useState<{ current: number; total: number } | null>(null);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [syncingManifest, setSyncingManifest] = useState(false);
+  const [manifestStatus, setManifestStatus] = useState<string | null>(null);
+
+  async function handleSyncManifest() {
+    setSyncingManifest(true);
+    setManifestStatus("Menyinkronkan...");
+    try {
+      const res = await fetch("/api/vault/manifest/sync", { method: "POST" });
+      const json = await res.json();
+      if (json.success) {
+        setManifestStatus(`✓ Synced (${json.data?.total_media || 0})`);
+        setTimeout(() => setManifestStatus(null), 4000);
+      } else {
+        setManifestStatus(`⚠️ Gagal: ${json.error || "Error"}`);
+        setTimeout(() => setManifestStatus(null), 5000);
+      }
+    } catch (err: any) {
+      setManifestStatus(`⚠️ Error`);
+      setTimeout(() => setManifestStatus(null), 5000);
+    } finally {
+      setSyncingManifest(false);
+    }
+  }
 
   async function load(org?: string, prog?: string) {
     try {
@@ -451,6 +474,16 @@ export default function VaultPage() {
         </div>
 
         <div className="sidebar-bottom">
+          <button
+            type="button"
+            className="nav-item manifest-sync-btn"
+            disabled={syncingManifest}
+            onClick={handleSyncManifest}
+            title="Sinkronkan seluruh katalog media ke repo backup GitHub"
+          >
+            <span>{syncingManifest ? "⏳" : "💾"}</span>
+            {manifestStatus || (syncingManifest ? "Menyinkronkan..." : "Backup ke GitHub")}
+          </button>
           <a
             className="nav-item"
             href="/lab"

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPublicSupabase } from "@/lib/supabase/public";
+import { syncManifestToGitHub } from "@/lib/manifest";
 
 export const dynamic = "force-dynamic";
 
@@ -15,15 +16,28 @@ export async function GET(req: NextRequest) {
   }
 
   const start = Date.now();
+  let manifestSyncResult = null;
+
   try {
     const sb = createPublicSupabase();
     // Ping ringan: query 1 row dari media (tabel katalog utama)
     const { error, count } = await sb.from("media").select("id", { count: "exact", head: true }).limit(1);
     if (error) throw error;
+
+    // Automatic Disaster Recovery Sync to GitHub Manifest (if token is configured)
+    if (process.env.GITHUB_MANIFEST_TOKEN) {
+      try {
+        manifestSyncResult = await syncManifestToGitHub();
+      } catch (mErr: any) {
+        manifestSyncResult = { error: mErr.message };
+      }
+    }
+
     return NextResponse.json({
       ok: true,
-      message: "Supabase keep-alive ping sukses",
+      message: "Supabase keep-alive ping sukses & manifest sync",
       count,
+      manifestSync: manifestSyncResult,
       durationMs: Date.now() - start,
       timestamp: new Date().toISOString(),
     });

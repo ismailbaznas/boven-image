@@ -14,7 +14,30 @@ Dokumen ini mencatat riwayat tahapan perbaikan pada aplikasi **Media Vault (Bove
 | **Tahap 3 (Selesai)** | `57ea470` | Mobile Off-Canvas Drawer (Sandwich ☰) & Floating Bottom Bar untuk akses penuh folder & program |
 | **Tahap 4 (Selesai)** | `18357d8` | Favicon logo resmi & Halaman Kepatuhan Google Cloud OAuth (/privacy-policy & /terms) |
 | **Tahap 5 (Selesai)** | `14bb3a7` | Client-Side Auto-Compressor (Canvas 2.5K 85%) untuk foto raksasa > 4 MB (hemat kuota & bebas batas upload) |
-| **Tahap 6 (Selesai)** | *Pending commit* | Perbaikan tampilan detail modal mobile (Copy HTML/Next.js rapi) & tombol Buka Resolusi Asli |
+| **Tahap 6 (Selesai)** | `0876945` | Perbaikan tampilan detail modal mobile (Copy HTML/Next.js rapi) & tombol Buka Resolusi Asli |
+| **Tahap 7 (Selesai)** | *Pending commit* | Integrasi Disaster Recovery Auto-Sync ke GitHub Manifest (`ismailbaznas/boven-image-manifest`) |
+
+---
+
+## 🚀 TAHAP 7 — Disaster Recovery GitHub Manifest Auto-Sync
+
+### 1. Tujuan & Arsitektur Anti-Vendor Lock-in
+- Mencegah kehilangan metadata & daftar URL foto Blogger jika suatu saat database Supabase rusak atau tutup.
+- Seluruh struktur data diekspor ke format terbuka (JSON & SQL standar) dan di-commit langsung ke repositori GitHub:
+  `https://github.com/ismailbaznas/boven-image-manifest`
+
+### 2. File Manifest yang Dihasilkan
+- `data/media.json`: Seluruh daftar foto (`boven-digoel-[N]`), URL Blogger asli (`s0`), SHA-256 hash, metadata, dan timestamp.
+- `data/organizations.json`: Daftar folder organisasi & konfigurasi sampul.
+- `data/programs.json`: Hierarki program per organisasi.
+- `data/summary.json`: Ringkasan statistik & timestamp sync terakhir.
+- `sql/backup.sql`: Skrip SQL standar siap pakai untuk restore ke database baru manapun (PostgreSQL, SQLite, MySQL, dll).
+- `README.md`: Ringkasan status arsip & panduan pemulihan (*Disaster Recovery Guide*).
+
+### 3. Otomasi & Kontrol Pengguna (`lib/manifest.ts`, `/api/vault/manifest/sync`, `app/page.tsx`)
+- **Tombol Manual di Sidebar:** Tombol `[ 💾 Backup ke GitHub ]` di bagian bawah sidebar untuk memicu sinkronisasi kapan saja dengan satu klik.
+- **Auto-Sync via Keep-Alive Cron:** Terintegrasi di `/api/cron/keep-alive` sehingga backup manifest berjalan otomatis secara berkala.
+- **Endpoint Terbuka:** `/api/vault/manifest/sync` (POST untuk trigger sync, GET untuk cek status).
 
 ---
 

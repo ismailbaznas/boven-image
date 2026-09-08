@@ -93,6 +93,15 @@ button { cursor: pointer; }
 .workspace-card strong { font-size: 12px; }
 .workspace-card span { color: var(--muted); font-size: 10px; margin-top: 3px; }
 .sidebar-bottom { margin-top: auto; display: grid; gap: 5px; padding-top: 16px; }
+.manifest-sync-btn {
+  border: 1px dashed #cde3d5 !important;
+  color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+  font-weight: 700 !important;
+}
+.manifest-sync-btn:hover { background: #d8ede0 !important; }
+.manifest-sync-btn:disabled { opacity: 0.7; cursor: wait; }
+
 .sidebar-legal { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; font-size: 10px; color: #9aa19b; }
 .sidebar-legal a { color: #88908a; text-decoration: none; }
 .sidebar-legal a:hover { color: var(--accent); text-decoration: underline; }
