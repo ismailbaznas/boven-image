@@ -46,5 +46,9 @@ Simpan `s0` (original) di DB. Preview pakai varian dinamis `lib/image.ts`:
 ## Scripts
 `npm run dev` | `npm run build` | `npm run start`
 
-## Deploy
-Import `zokishmael/boven-image` di Vercel, set 6 env vars, tambah Vercel domain ke Google OAuth → Authorized redirect URIs + JavaScript origins (`https://<domain>`, `http://localhost:3000`).
+## Repositories & Deploy
+- **Repo Utama (Production):** `https://github.com/ismailbaznas/boven-image.git` (`ismail`) — Terhubung langsung ke Vercel (`boven-image.vercel.app`) dan Supabase.
+- **Repo Backup:** `https://github.com/zokishmael/boven-image.git` (`origin`).
+- **Repo Manifest (Disaster Recovery):** `https://github.com/ismailbaznas/boven-image-manifest.git` — Salinan data JSON & SQL independen.
+
+Set 6 env vars di Vercel, tambah Vercel domain ke Google OAuth → Authorized redirect URIs + JavaScript origins (`https://<domain>`, `http://localhost:3000`).

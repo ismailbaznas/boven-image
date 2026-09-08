@@ -4,7 +4,12 @@ Dokumen ini mencatat riwayat tahapan perbaikan pada aplikasi **Media Vault (Bove
 
 ---
 
-## 📌 Status Terakhir Repository & Checkpoint
+## 📌 Struktur Repositori & Checkpoint
+
+### Repositori Resmi:
+- **Repo Utama (Production):** `https://github.com/ismailbaznas/boven-image.git` (`ismail`) — Akun utama yang terhubung langsung dengan Supabase dan deployment Vercel (`boven-image.vercel.app`).
+- **Repo Backup:** `https://github.com/zokishmael/boven-image.git` (`origin`).
+- **Repo Manifest (Disaster Recovery):** `https://github.com/ismailbaznas/boven-image-manifest.git` — Pencadangan independen database (JSON & SQL).
 
 | Checkpoint | Commit Ref / Hash | Deskripsi Singkat |
 |---|---|---|
@@ -15,7 +20,7 @@ Dokumen ini mencatat riwayat tahapan perbaikan pada aplikasi **Media Vault (Bove
 | **Tahap 4 (Selesai)** | `18357d8` | Favicon logo resmi & Halaman Kepatuhan Google Cloud OAuth (/privacy-policy & /terms) |
 | **Tahap 5 (Selesai)** | `14bb3a7` | Client-Side Auto-Compressor (Canvas 2.5K 85%) untuk foto raksasa > 4 MB (hemat kuota & bebas batas upload) |
 | **Tahap 6 (Selesai)** | `0876945` | Perbaikan tampilan detail modal mobile (Copy HTML/Next.js rapi) & tombol Buka Resolusi Asli |
-| **Tahap 7 (Selesai)** | *Pending commit* | Integrasi Disaster Recovery Auto-Sync ke GitHub Manifest (`ismailbaznas/boven-image-manifest`) |
+| **Tahap 7 (Selesai)** | `62fa027` | Integrasi Disaster Recovery Auto-Sync ke GitHub Manifest (`ismailbaznas/boven-image-manifest`) |
 
 ---
 

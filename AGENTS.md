@@ -27,7 +27,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## 4. OAuth Konsisten
 - `lib/blogger.ts:getOAuthConfig()` dynamic `req.nextUrl.origin`. Authorized redirect URIs & JavaScript origins di Google Console harus berisi `http://localhost:3000` + `https://boven-image.vercel.app`. Jangan hardcode localhost.
 
-## 5. Anti-Ulang Percakapan
+## 5. Anti-Ulang Percakapan & Git Remotes
+- **Repo Utama:** `https://github.com/ismailbaznas/boven-image.git` (`ismail`) — Akun utama yang terhubung langsung dengan Supabase dan deployment Vercel (`boven-image.vercel.app`).
+- **Repo Backup:** `https://github.com/zokishmael/boven-image.git` (`origin`).
+- **Repo Manifest (Disaster Recovery):** `https://github.com/ismailbaznas/boven-image-manifest.git`.
+- Setiap push wajib dikirim ke kedua remote (`origin` dan `ismail`).
 - Jangan tanyakan lagi blogId (3348673630650024103), Supabase URL (ruxmomhgycsbhxjpkenv), atau kredensial yang sudah ada di `.env.local` (gitignore). Baca env & `isSupabaseConfigured()`.
 - Jangan minta ulang Phase 0 — rangkuman ada di README & `brainstorm.md`.
 
