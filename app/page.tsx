@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import "./vault.css";
 import { bloggerSrcSet, bloggerVariant } from "@/lib/image";
 import { slugify } from "@/lib/slug";
+import { compressImageIfNeeded, StagedMediaFile } from "@/lib/compress";
 
 type Media = {
   id: string;
@@ -44,11 +45,11 @@ const emptyForm = {
 };
 
 function StagedFileItem({
-  file,
+  item,
   onRemove,
   disabled,
 }: {
-  file: File;
+  item: StagedMediaFile;
   onRemove: () => void;
   disabled: boolean;
 }) {
@@ -57,30 +58,44 @@ function StagedFileItem({
   useEffect(() => {
     let url = "";
     try {
-      url = URL.createObjectURL(file);
+      url = URL.createObjectURL(item.file);
       setThumbUrl(url);
     } catch {}
     return () => {
       if (url) URL.revokeObjectURL(url);
     };
-  }, [file]);
+  }, [item.file]);
 
-  const sizeKb = (file.size / 1024).toFixed(0);
-  const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-  const sizeDisplay = file.size > 1024 * 1024 ? `${sizeMb} MB` : `${sizeKb} KB`;
+  const origMb = (item.originalSize / (1024 * 1024)).toFixed(1);
+  const compMb = (item.compressedSize / (1024 * 1024)).toFixed(1);
+  const compKb = (item.compressedSize / 1024).toFixed(0);
+  const displaySize = item.compressedSize > 1024 * 1024 ? `${compMb} MB` : `${compKb} KB`;
 
   return (
     <div className="staged-item">
       <div className="staged-thumb-wrap">
         {thumbUrl ? (
-          <img src={thumbUrl} alt={file.name} className="staged-thumb" />
+          <img src={thumbUrl} alt={item.file.name} className="staged-thumb" />
         ) : (
           <div className="staged-thumb-fallback">🖼</div>
         )}
+        {item.isCompressed && <span className="staged-badge">✓ Optimized</span>}
       </div>
       <div className="staged-info">
-        <span className="staged-filename" title={file.name}>{file.name}</span>
-        <span className="staged-filesize">{sizeDisplay}</span>
+        <span className="staged-filename" title={item.file.name}>
+          {item.file.name}
+        </span>
+        <div className="staged-size-row">
+          {item.isCompressed ? (
+            <>
+              <span className="staged-old-size">{origMb} MB</span>
+              <span className="staged-size-arrow">➔</span>
+              <strong className="staged-filesize">{displaySize}</strong>
+            </>
+          ) : (
+            <span className="staged-filesize">{displaySize}</span>
+          )}
+        </div>
       </div>
       <button
         type="button"
@@ -109,7 +124,9 @@ export default function VaultPage() {
   const [filterOrg, setFilterOrg] = useState("");
   const [filterProg, setFilterProg] = useState("");
   const [settingCover, setSettingCover] = useState(false);
-  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [stagedItems, setStagedItems] = useState<StagedMediaFile[]>([]);
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizingProgress, setOptimizingProgress] = useState<{ current: number; total: number } | null>(null);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -142,26 +159,39 @@ export default function VaultPage() {
     loadFolders();
   }, []);
 
-  function addFiles(fileList: FileList | File[]) {
+  async function addFiles(fileList: FileList | File[]) {
     const valid = Array.from(fileList).filter((f) => f.size > 0 && f.type.startsWith("image/"));
     if (!valid.length) return;
 
-    setStagedFiles((prev) => {
-      const existingKeys = new Set(prev.map((f) => `${f.name}-${f.size}-${f.lastModified}`));
-      const uniqueIncoming = valid.filter(
-        (f) => !existingKeys.has(`${f.name}-${f.size}-${f.lastModified}`)
+    setOptimizing(true);
+    const newStaged: StagedMediaFile[] = [];
+
+    for (let i = 0; i < valid.length; i++) {
+      const f = valid[i];
+      setOptimizingProgress({ current: i + 1, total: valid.length });
+      const processed = await compressImageIfNeeded(f);
+      newStaged.push(processed);
+    }
+
+    setStagedItems((prev) => {
+      const existingKeys = new Set(prev.map((item) => `${item.file.name}-${item.originalSize}`));
+      const uniqueIncoming = newStaged.filter(
+        (item) => !existingKeys.has(`${item.file.name}-${item.originalSize}`)
       );
       return [...prev, ...uniqueIncoming];
     });
+
+    setOptimizing(false);
+    setOptimizingProgress(null);
   }
 
   function removeStagedFile(index: number) {
-    setStagedFiles((prev) => prev.filter((_, i) => i !== index));
+    setStagedItems((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function startBatchUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!stagedFiles.length) {
+    if (!stagedItems.length) {
       alert("Silakan pilih minimal 1 foto terlebih dahulu.");
       return;
     }
@@ -173,17 +203,18 @@ export default function VaultPage() {
     let failCount = 0;
     const errors: string[] = [];
 
-    for (let i = 0; i < stagedFiles.length; i++) {
-      const file = stagedFiles[i];
+    for (let i = 0; i < stagedItems.length; i++) {
+      const item = stagedItems[i];
+      const file = item.file;
       const currentNum = i + 1;
-      const currentPercent = Math.round((i / stagedFiles.length) * 100);
+      const currentPercent = Math.round((i / stagedItems.length) * 100);
 
       setUploadProgress({
         current: currentNum,
-        total: stagedFiles.length,
+        total: stagedItems.length,
         filename: file.name,
         percent: currentPercent,
-        statusText: `Mengupload ${currentNum} dari ${stagedFiles.length}: ${file.name}...`,
+        statusText: `Mengupload ${currentNum} dari ${stagedItems.length}: ${file.name}...`,
       });
 
       try {
@@ -213,13 +244,13 @@ export default function VaultPage() {
 
       setUploadProgress({
         current: currentNum,
-        total: stagedFiles.length,
+        total: stagedItems.length,
         filename: file.name,
-        percent: Math.round((currentNum / stagedFiles.length) * 100),
+        percent: Math.round((currentNum / stagedItems.length) * 100),
         statusText:
-          currentNum === stagedFiles.length
+          currentNum === stagedItems.length
             ? "Selesai memproses semua foto!"
-            : `Mengupload ${currentNum + 1} dari ${stagedFiles.length}...`,
+            : `Mengupload ${currentNum + 1} dari ${stagedItems.length}...`,
       });
     }
 
@@ -227,7 +258,7 @@ export default function VaultPage() {
 
     if (failCount === 0) {
       setLog(`Berhasil mengupload ${successCount} foto ke Blogger & Supabase.`);
-      setStagedFiles([]);
+      setStagedItems([]);
       setUploadProgress(null);
       setShowUpload(false);
       await Promise.all([load(), loadFolders()]);
@@ -586,9 +617,9 @@ export default function VaultPage() {
         <div
           className="modal-backdrop"
           onClick={() => {
-            if (!loading) {
+            if (!loading && !optimizing) {
               setShowUpload(false);
-              setStagedFiles([]);
+              setStagedItems([]);
               setUploadProgress(null);
             }
           }}
@@ -602,10 +633,10 @@ export default function VaultPage() {
               <button
                 type="button"
                 className="close-btn"
-                disabled={loading}
+                disabled={loading || optimizing}
                 onClick={() => {
                   setShowUpload(false);
-                  setStagedFiles([]);
+                  setStagedItems([]);
                   setUploadProgress(null);
                 }}
               >
@@ -614,7 +645,7 @@ export default function VaultPage() {
             </div>
 
             <form onSubmit={startBatchUpload}>
-              {stagedFiles.length === 0 ? (
+              {stagedItems.length === 0 ? (
                 <div
                   className={`dropzone ${dragging ? "dragging" : ""}`}
                   onDragOver={(e) => {
@@ -630,7 +661,7 @@ export default function VaultPage() {
                 >
                   <div className="upload-icon">↑</div>
                   <strong>Tarik & lepas foto ke sini</strong>
-                  <span>atau pilih file dari komputer • mendukung banyak foto</span>
+                  <span>atau pilih file dari komputer • foto besar otomatis dioptimalkan</span>
                   <label className="secondary-btn">
                     📁 Pilih Foto dari Komputer
                     <input
@@ -649,9 +680,11 @@ export default function VaultPage() {
                 <div className="staged-box">
                   <div className="staged-box-header">
                     <div className="staged-box-title">
-                      <strong>📷 {stagedFiles.length} foto terpilih</strong>
+                      <strong>📷 {stagedItems.length} foto terpilih</strong>
                       <span className="staged-total-size">
-                        (Total {(stagedFiles.reduce((acc, f) => acc + f.size, 0) / (1024 * 1024)).toFixed(2)} MB)
+                        {stagedItems.some((f) => f.isCompressed)
+                          ? `(Total ${(stagedItems.reduce((acc, f) => acc + f.compressedSize, 0) / (1024 * 1024)).toFixed(1)} MB — hemat ${((stagedItems.reduce((acc, f) => acc + f.originalSize, 0) - stagedItems.reduce((acc, f) => acc + f.compressedSize, 0)) / (1024 * 1024)).toFixed(1)} MB dari ${(stagedItems.reduce((acc, f) => acc + f.originalSize, 0) / (1024 * 1024)).toFixed(1)} MB)`
+                          : `(Total ${(stagedItems.reduce((acc, f) => acc + f.compressedSize, 0) / (1024 * 1024)).toFixed(1)} MB)`}
                       </span>
                     </div>
                     <div className="staged-box-actions">
@@ -662,7 +695,7 @@ export default function VaultPage() {
                           multiple
                           accept="image/*"
                           hidden
-                          disabled={loading}
+                          disabled={loading || optimizing}
                           onChange={(e) => {
                             if (e.target.files) addFiles(e.target.files);
                             e.target.value = "";
@@ -672,20 +705,29 @@ export default function VaultPage() {
                       <button
                         type="button"
                         className="staged-clear-btn"
-                        disabled={loading}
-                        onClick={() => setStagedFiles([])}
+                        disabled={loading || optimizing}
+                        onClick={() => setStagedItems([])}
                       >
                         Bersihkan
                       </button>
                     </div>
                   </div>
 
+                  {optimizing && (
+                    <div className="optimizing-banner">
+                      <div className="optimizing-spinner" />
+                      <span>
+                        ⚡ Mengoptimalkan foto untuk upload ({optimizingProgress?.current || 0}/{optimizingProgress?.total || 0})...
+                      </span>
+                    </div>
+                  )}
+
                   <div className="staged-list">
-                    {stagedFiles.map((file, idx) => (
+                    {stagedItems.map((item, idx) => (
                       <StagedFileItem
-                        key={`${file.name}-${file.size}-${idx}`}
-                        file={file}
-                        disabled={loading}
+                        key={`${item.file.name}-${item.originalSize}-${idx}`}
+                        item={item}
+                        disabled={loading || optimizing}
                         onRemove={() => removeStagedFile(idx)}
                       />
                     ))}
@@ -705,7 +747,7 @@ export default function VaultPage() {
                     }}
                     placeholder="Pilih list atau ketik manual..."
                     autoComplete="off"
-                    disabled={loading}
+                    disabled={loading || optimizing}
                   />
                   <datalist id="org-datalist">
                     {folders.map((o: any) => (
@@ -724,7 +766,7 @@ export default function VaultPage() {
                     }}
                     placeholder="Pilih list atau ketik manual..."
                     autoComplete="off"
-                    disabled={loading}
+                    disabled={loading || optimizing}
                   />
                   <datalist id="prog-datalist">
                     {availablePrograms.map((pName: string) => (
@@ -738,7 +780,7 @@ export default function VaultPage() {
                     value={form.lokasi}
                     onChange={(e) => setForm({ ...form, lokasi: e.target.value })}
                     placeholder="Contoh: Tanah Merah"
-                    disabled={loading}
+                    disabled={loading || optimizing}
                   />
                 </label>
                 <label>
@@ -747,7 +789,7 @@ export default function VaultPage() {
                     type="date"
                     value={form.tanggal}
                     onChange={(e) => setForm({ ...form, tanggal: e.target.value })}
-                    disabled={loading}
+                    disabled={loading || optimizing}
                   />
                 </label>
               </div>
@@ -781,10 +823,10 @@ export default function VaultPage() {
                 <button
                   type="button"
                   className="ghost-btn"
-                  disabled={loading}
+                  disabled={loading || optimizing}
                   onClick={() => {
                     setShowUpload(false);
-                    setStagedFiles([]);
+                    setStagedItems([]);
                     setUploadProgress(null);
                   }}
                 >
@@ -793,12 +835,14 @@ export default function VaultPage() {
                 <button
                   type="submit"
                   className="primary-btn"
-                  disabled={loading || stagedFiles.length === 0}
+                  disabled={loading || optimizing || stagedItems.length === 0}
                 >
                   {loading
-                    ? `Mengupload (${uploadProgress?.current || 0}/${stagedFiles.length})...`
-                    : stagedFiles.length > 0
-                    ? `🚀 Upload ${stagedFiles.length} Foto ke Blogger`
+                    ? `Mengupload (${uploadProgress?.current || 0}/${stagedItems.length})...`
+                    : optimizing
+                    ? "Mengoptimalkan foto..."
+                    : stagedItems.length > 0
+                    ? `🚀 Upload ${stagedItems.length} Foto ke Blogger`
                     : "Pilih foto dulu"}
                 </button>
               </div>

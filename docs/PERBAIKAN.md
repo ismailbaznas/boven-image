@@ -12,7 +12,26 @@ Dokumen ini mencatat riwayat tahapan perbaikan pada aplikasi **Media Vault (Bove
 | **Tahap 1 (Selesai)** | `69aa5d4` | Input field dipermudah (datalist org & prog), ID `boven-digoel-[N]`, filename `[file]-[org]-[prog]-[id].[ext]`, sampul folder manual, mobile compact |
 | **Tahap 2 (Selesai)** | `5e3cbb9` | Multi-file staging preview, progressive batch uploader dengan live progress bar, bebas timeout serverless |
 | **Tahap 3 (Selesai)** | `57ea470` | Mobile Off-Canvas Drawer (Sandwich ☰) & Floating Bottom Bar untuk akses penuh folder & program |
-| **Tahap 4 (Selesai)** | *Pending commit* | Favicon logo resmi & Halaman Kepatuhan Google Cloud OAuth (/privacy-policy & /terms) |
+| **Tahap 4 (Selesai)** | `18357d8` | Favicon logo resmi & Halaman Kepatuhan Google Cloud OAuth (/privacy-policy & /terms) |
+| **Tahap 5 (Selesai)** | *Pending commit* | Client-Side Auto-Compressor (Canvas 2.5K 85%) untuk foto raksasa > 4 MB (hemat kuota & bebas batas upload) |
+
+---
+
+## 🚀 TAHAP 5 — Client-Side Auto-Compressor (Opsi B)
+
+### 1. Masalah Foto Resolusi Tinggi Kamera
+- File foto dari kamera digital/smartphone beresolusi tinggi seringkali berukuran 14 MB – 20 MB+ per foto.
+- Batasan request body serverless Vercel adalah 4.5 MB per file.
+
+### 2. Solusi & Perubahan Baru (`lib/compress.ts`, `app/page.tsx`, `app/vault.css`)
+- **Auto-Compress Client di Browser:**
+  - Saat file foto dipilih atau di-drag & drop, browser secara otomatis mendeteksi jika ukuran file melebihi ambang batas aman (> 3.8 MB).
+  - Melakukan downscaling cerdas ke resolusi tinggi **2560px (2.5K High-Res)** dengan kualitas JPEG **85%** menggunakan HTML5 Canvas.
+  - Ukuran file turun drastis dari **~16 MB** menjadi **~800 KB – 1.6 MB** (pengurangan ukuran hingga ~90-95%) tanpa kehilangan ketajaman visual.
+- **Visual Feedback Lengkap di Modal:**
+  - Menampilkan banner progres saat proses optimasi berjalan: `⚡ Mengoptimalkan foto untuk upload (X/Total)...`
+  - Setiap kartu foto menampilkan badge `✓ Optimized`, ukuran asli yang dicoret, dan ukuran baru yang dioptimalkan (`16.5 MB ➔ 1.2 MB`).
+  - Total ukuran keseluruhan dan total MB yang berhasil dihemat ditampilkan di header modal: `(Total 74.2 MB — hemat 958 MB dari 1.03 GB)`.
 
 ---
 
