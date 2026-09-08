@@ -21,6 +21,27 @@ Dokumen ini mencatat riwayat tahapan perbaikan pada aplikasi **Media Vault (Bove
 | **Tahap 5 (Selesai)** | `14bb3a7` | Client-Side Auto-Compressor (Canvas 2.5K 85%) untuk foto raksasa > 4 MB (hemat kuota & bebas batas upload) |
 | **Tahap 6 (Selesai)** | `0876945` | Perbaikan tampilan detail modal mobile (Copy HTML/Next.js rapi) & tombol Buka Resolusi Asli |
 | **Tahap 7 (Selesai)** | `62fa027` | Integrasi Disaster Recovery Auto-Sync ke GitHub Manifest (`ismailbaznas/boven-image-manifest`) |
+| **Tahap 8 (Selesai)** | *Pending commit* | Paginasi dinamis (`page` / `range`), tombol "Muat Lebih Banyak", & perbaikan akurasi hitungan homepage |
+
+---
+
+## 🚀 TAHAP 8 — Paginasi Dinamis & Akurasi Hitungan Homepage
+
+### 1. Masalah Batasan 50 Media & Ketidaksesuaian Hitungan
+- Endpoint `/api/vault/media` sebelumnya dibatasi `limit=50` statis tanpa dukungan nomor halaman (`page`), sehingga program dengan 100+ foto hanya menampilkan 50 foto pertama.
+- Strip statistik di homepage sebelumnya menghitung `items.length` (hanya foto yang ter-load di halaman saat itu, misal 50), bukan total aktual dari seluruh arsip database (140+ media).
+
+### 2. Solusi & Perubahan Baru (`app/api/vault/media/route.ts` & `app/page.tsx`)
+- **Paginasi & Exact Count di API:**
+  - Endpoint `/api/vault/media` kini mendukung parameter `page`, `limit`, dan menggunakan query Supabase `.select("*", { count: "exact" }).range(from, to)`.
+  - Mengembalikan objek respons terstruktur `pagination: { page, limit, total, total_pages, has_more }`.
+- **Tombol "Muat Lebih Banyak" (`.load-more-btn`):**
+  - Ketika sebuah folder/program memiliki lebih dari 50 foto, muncul tombol: `[ ⬇️ Muat Lebih Banyak (Tersisa N foto) ]`.
+  - Mengklik tombol akan mengambil 50 foto berikutnya secara halus dan menggabungkannya ke galeri tanpa reload halaman.
+- **Sinkronisasi Hitungan Akurat di Homepage:**
+  - **Total Media di Stats Strip:** Menghitung total akumulasi seluruh folder organisasi (`globalTotalMedia`, misal 140+ media).
+  - **Total Program di Stats Strip:** Menghitung seluruh program terdaftar (`globalTotalPrograms`).
+  - **Keterangan Toolbar & Header:** Menampilkan counter riil, contoh: `Menampilkan 50 dari 108 media`.
 
 ---
 

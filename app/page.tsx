@@ -132,6 +132,11 @@ export default function VaultPage() {
   const [syncingManifest, setSyncingManifest] = useState(false);
   const [manifestStatus, setManifestStatus] = useState<string | null>(null);
 
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   async function handleSyncManifest() {
     setSyncingManifest(true);
     setManifestStatus("Menyinkronkan...");
@@ -153,20 +158,46 @@ export default function VaultPage() {
     }
   }
 
-  async function load(org?: string, prog?: string) {
+  async function load(org?: string, prog?: string, pageNum = 1, append = false) {
     try {
-      const o = org ?? filterOrg;
-      const p = prog ?? filterProg;
-      const params = new URLSearchParams({ q, limit: "50" });
+      const o = org !== undefined ? org : filterOrg;
+      const p = prog !== undefined ? prog : filterProg;
+      const params = new URLSearchParams({ limit: "50", page: String(pageNum) });
+      if (q) params.set("q", q);
       if (o) params.set("org", o);
       if (p) params.set("prog", p);
+
+      if (pageNum === 1 && !append) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
       const r = await fetch(`/api/vault/media?${params.toString()}`);
       const j = await r.json();
-      setItems(j.data || []);
+
+      if (append) {
+        setItems((prev) => [...prev, ...(j.data || [])]);
+      } else {
+        setItems(j.data || []);
+      }
+
+      setPage(pageNum);
+      setTotalCount(j.pagination?.total ?? (j.data?.length || 0));
+      setHasMore(j.pagination?.has_more ?? false);
+
       if (j.error) setLog(j.error + (j.hint ? "\n" + j.hint : ""));
     } catch (error) {
       setLog(error instanceof Error ? error.message : "Gagal memuat media");
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
+  }
+
+  async function loadMore() {
+    if (loadingMore || !hasMore) return;
+    await load(filterOrg, filterProg, page + 1, true);
   }
 
   async function loadFolders() {
@@ -333,10 +364,13 @@ export default function VaultPage() {
     return org?.cover_media_id === selected.id;
   }, [folders, selected]);
 
-  const programs = useMemo(() => {
-    const values = items.map((m) => m.metadata?.program).filter(Boolean);
-    return Array.from(new Set(values));
-  }, [items]);
+  const globalTotalMedia = useMemo(() => {
+    return folders.reduce((sum: number, o: any) => sum + (o.count || 0), 0);
+  }, [folders]);
+
+  const globalTotalPrograms = useMemo(() => {
+    return folders.reduce((sum: number, o: any) => sum + (o.programs?.length || 0), 0);
+  }, [folders]);
 
   const availablePrograms = useMemo(() => {
     if (!form.organisasi) {
@@ -355,7 +389,7 @@ export default function VaultPage() {
     return Array.from(new Set(allProgs.map((p: any) => p.name)));
   }, [folders, form.organisasi]);
 
-  const displayItems = !filterOrg && !q ? items.slice(0, 8) : items;
+  const displayItems = items;
 
   return (
     <main className="vault-shell">
@@ -539,61 +573,128 @@ export default function VaultPage() {
         <div className="toolbar">
           <div className="search-box">
             <span>⌕</span>
-            <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && load()} placeholder="Cari ID, nama file, program..." />
-            {q && <button onClick={() => { setQ(""); load("",""); }}>×</button>}
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && load()}
+              placeholder="Cari ID, nama file, program..."
+            />
+            {q && (
+              <button
+                onClick={() => {
+                  setQ("");
+                  load("", "");
+                }}
+              >
+                ×
+              </button>
+            )}
           </div>
-          <button className="ghost-btn" onClick={() => load()}>↻ Refresh</button>
-          <div className="media-count">{items.length} media</div>
+          <button
+            className="ghost-btn"
+            onClick={() => {
+              load();
+              loadFolders();
+            }}
+          >
+            ↻ Refresh
+          </button>
+          <div className="media-count">
+            {filterOrg || filterProg || q
+              ? `Menampilkan ${items.length} dari ${totalCount} media`
+              : `${globalTotalMedia || totalCount || items.length} media`}
+          </div>
         </div>
 
         <div className="stats-strip">
           <div className="stat-item">
             <span className="stat-label">Total</span>
-            <strong className="stat-value">{items.length} <small>Media</small></strong>
+            <strong className="stat-value">
+              {globalTotalMedia || totalCount || items.length} <small>Media</small>
+            </strong>
           </div>
           <div className="stat-divider" />
           <div className="stat-item">
             <span className="stat-label">Program</span>
-            <strong className="stat-value">{programs.length} <small>Koleksi</small></strong>
+            <strong className="stat-value">
+              {globalTotalPrograms || availablePrograms.length} <small>Koleksi</small>
+            </strong>
           </div>
           <div className="stat-divider" />
           <div className="stat-item">
             <span className="stat-label">Storage</span>
-            <strong className="stat-value"><span className="status-dot" />Blogger</strong>
+            <strong className="stat-value">
+              <span className="status-dot" />Blogger
+            </strong>
           </div>
         </div>
 
         {!filterOrg && !q && (
           <div className="section-heading">
-            <div><h2>Organisasi</h2><span>Folder organisasi — klik untuk buka program</span></div>
+            <div>
+              <h2>Organisasi</h2>
+              <span>Folder organisasi — klik untuk buka program</span>
+            </div>
           </div>
         )}
         {!filterOrg && !q && (
           <div className="org-folder-grid">
-            {folders.map((org:any)=>(
-              <button key={org.id} className="org-folder-card" onClick={()=>{ setExpanded(org.id); setFilterOrg(org.id); setFilterProg(""); load(org.id,""); }}>
+            {folders.map((org: any) => (
+              <button
+                key={org.id}
+                className="org-folder-card"
+                onClick={() => {
+                  setExpanded(org.id);
+                  setFilterOrg(org.id);
+                  setFilterProg("");
+                  load(org.id, "");
+                }}
+              >
                 <div className="org-cover">
-                  {org.cover ? <img src={bloggerVariant(org.cover,"thumb")} alt={org.name} loading="lazy" /> : <div className="org-cover-placeholder">📁</div>}
+                  {org.cover ? (
+                    <img src={bloggerVariant(org.cover, "thumb")} alt={org.name} loading="lazy" />
+                  ) : (
+                    <div className="org-cover-placeholder">📁</div>
+                  )}
                 </div>
                 <div className="org-folder-info">
                   <strong>{org.name}</strong>
-                  <span>{org.count} media • {org.programs?.length||0} program</span>
+                  <span>
+                    {org.count} media • {org.programs?.length || 0} program
+                  </span>
                 </div>
               </button>
             ))}
           </div>
         )}
 
-        {!filterOrg && !q && items.length>0 && (
-          <div className="section-heading">
-            <div><h2>Terbaru</h2><span>6-10 gambar terbaru</span></div>
-            <button className="ghost-btn" onClick={()=>{ setFilterOrg(""); setFilterProg(""); load("",""); }}>Lihat semua →</button>
-          </div>
-        )}
-
         <div className="section-heading" id="collections">
-          <div><h2>{filterProg ? folders.find((o:any)=>o.id===filterOrg)?.programs?.find((p:any)=>p.id===filterProg)?.name : filterOrg ? folders.find((o:any)=>o.id===filterOrg)?.name : "All media"}</h2><span>{filterOrg || q ? `${items.length} hasil` : "Terbaru ditampilkan lebih dulu"}</span></div>
-          {(filterOrg || filterProg) && <button className="ghost-btn" onClick={()=>{ setFilterOrg(""); setFilterProg(""); load("",""); }}>← Semua organisasi</button>}
+          <div>
+            <h2>
+              {filterProg
+                ? folders.find((o: any) => o.id === filterOrg)?.programs?.find((p: any) => p.id === filterProg)?.name || "Program"
+                : filterOrg
+                ? folders.find((o: any) => o.id === filterOrg)?.name || "Organisasi"
+                : "Semua Media"}
+            </h2>
+            <span>
+              {filterOrg || filterProg || q
+                ? `${totalCount} media ditemukan`
+                : `${globalTotalMedia || totalCount} total arsip • Terbaru ditampilkan lebih dulu`}
+            </span>
+          </div>
+          {(filterOrg || filterProg) && (
+            <button
+              className="ghost-btn"
+              onClick={() => {
+                setFilterOrg("");
+                setFilterProg("");
+                load("", "");
+              }}
+            >
+              ← Semua organisasi
+            </button>
+          )}
         </div>
 
         <div className="media-grid">
@@ -601,31 +702,62 @@ export default function VaultPage() {
             const thumb = bloggerVariant(m.blogger_url, "card");
             const thumbSmall = bloggerVariant(m.blogger_url, "thumb");
             return (
-            <article className="media-card" key={m.id} onClick={() => setSelected(m)}>
-              <div className="thumb-wrap">
-                <img
-                  src={thumbSmall}
-                  srcSet={`${thumbSmall} 200w, ${thumb} 320w`}
-                  sizes="(max-width: 620px) 180px, 240px"
-                  alt={m.title || m.filename}
-                  loading="lazy"
-                  decoding="async"
-                />
-                <div className="thumb-overlay"><span>View details</span></div>
-              </div>
-              <div className="media-info">
-                <div className="media-id">{m.organization_id || slugify(m.metadata?.organisasi || "boven-digoel")}</div>
-                <div className="media-title">{m.title || m.filename}</div>
-                <div className="media-meta">
-                  <span>{m.metadata?.program || "Tanpa program"}</span>
-                  <span>•</span>
-                  <span>{new Date(m.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
+              <article className="media-card" key={m.id} onClick={() => setSelected(m)}>
+                <div className="thumb-wrap">
+                  <img
+                    src={thumbSmall}
+                    srcSet={`${thumbSmall} 200w, ${thumb} 320w`}
+                    sizes="(max-width: 620px) 180px, 240px"
+                    alt={m.title || m.filename}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div className="thumb-overlay">
+                    <span>View details</span>
+                  </div>
                 </div>
-              </div>
-            </article>
-          );
+                <div className="media-info">
+                  <div className="media-id">
+                    {m.organization_id || slugify(m.metadata?.organisasi || "boven-digoel")}
+                  </div>
+                  <div className="media-title">{m.title || m.filename}</div>
+                  <div className="media-meta">
+                    <span>{m.metadata?.program || "Tanpa program"}</span>
+                    <span>•</span>
+                    <span>
+                      {new Date(m.created_at).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </article>
+            );
           })}
         </div>
+
+        {hasMore && (
+          <div className="load-more-wrap">
+            <button
+              type="button"
+              className="load-more-btn"
+              disabled={loadingMore}
+              onClick={loadMore}
+            >
+              {loadingMore ? (
+                <>
+                  <span className="optimizing-spinner" /> Memuat foto berikutnya...
+                </>
+              ) : (
+                <>
+                  <span>⬇️</span> Muat Lebih Banyak (Tersisa {totalCount - items.length} foto)
+                </>
+              )}
+            </button>
+          </div>
+        )}
 
         {!items.length && (
           <div className="empty-state">
