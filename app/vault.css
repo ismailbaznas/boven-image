@@ -92,7 +92,26 @@ button { cursor: pointer; }
 .workspace-dot { width: 9px; height: 9px; border-radius: 50%; background: #48a875; box-shadow: 0 0 0 4px #eaf6ef; }
 .workspace-card strong { font-size: 12px; }
 .workspace-card span { color: var(--muted); font-size: 10px; margin-top: 3px; }
-.sidebar-bottom { margin-top: auto; display: grid; gap: 5px; }
+.sidebar-bottom { margin-top: auto; display: grid; gap: 5px; padding-top: 16px; }
+.sidebar-legal { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; font-size: 10px; color: #9aa19b; }
+.sidebar-legal a { color: #88908a; text-decoration: none; }
+.sidebar-legal a:hover { color: var(--accent); text-decoration: underline; }
+
+.page-footer {
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.footer-legal { display: flex; align-items: center; gap: 8px; }
+.footer-legal a { color: var(--muted); text-decoration: none; }
+.footer-legal a:hover { color: var(--accent); text-decoration: underline; }
 
 .content {
   width: calc(100% - 248px);

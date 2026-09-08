@@ -11,7 +11,28 @@ Dokumen ini mencatat riwayat tahapan perbaikan pada aplikasi **Media Vault (Bove
 | **Baseline (Awal)** | `2ff8c39` | Normalisasi folder organisasi/program, sidebar 1-expand, Blogger resumable upload |
 | **Tahap 1 (Selesai)** | `69aa5d4` | Input field dipermudah (datalist org & prog), ID `boven-digoel-[N]`, filename `[file]-[org]-[prog]-[id].[ext]`, sampul folder manual, mobile compact |
 | **Tahap 2 (Selesai)** | `5e3cbb9` | Multi-file staging preview, progressive batch uploader dengan live progress bar, bebas timeout serverless |
-| **Tahap 3 (Selesai)** | *Pending commit* | Mobile Off-Canvas Drawer (Sandwich ☰) & Floating Bottom Bar untuk akses penuh folder & program |
+| **Tahap 3 (Selesai)** | `57ea470` | Mobile Off-Canvas Drawer (Sandwich ☰) & Floating Bottom Bar untuk akses penuh folder & program |
+| **Tahap 4 (Selesai)** | *Pending commit* | Favicon logo resmi & Halaman Kepatuhan Google Cloud OAuth (/privacy-policy & /terms) |
+
+---
+
+## 🚀 TAHAP 4 — Favicon Logo Resmi & Halaman Kepatuhan Google Cloud OAuth
+
+### 1. Favicon & Branding Logo
+- Menggunakan `app/logo.png` sebagai favicon resmi aplikasi.
+- Disalin ke `app/icon.png`, `app/apple-icon.png`, dan `public/logo.png`.
+- Dikonfigurasikan di metadata `app/layout.tsx` (`icons.icon`, `icons.apple`, `icons.shortcut`).
+
+### 2. Halaman Kepatuhan Google Cloud OAuth
+- **`/privacy-policy` (`app/privacy-policy/page.tsx`):**
+  - Menjelaskan identitas aplikasi **Boven Image (Media Vault)**.
+  - Memuat pengungkapan eksplisit kepatuhan terhadap **Google API Services User Data Policy** (khususnya persyaratan *Limited Use* pada scope `https://www.googleapis.com/auth/blogger`).
+  - Menjelaskan mekanisme penyimpanan aman token enkripsi sesi server, retensi data, serta cara pencabutan izin (revocation/deletion).
+- **`/terms` (`app/terms/page.tsx`):**
+  - Menjelaskan ketentuan penggunaan sistem arsip visual digital untuk kegiatan pelaporan dan dokumentasi resmi.
+  - Batasan tanggung jawab, hak cipta konten, dan integrasi Google API.
+- **Navigasi Legal:**
+  - Tautan Kebijakan Privasi dan Ketentuan Layanan ditambahkan di bagian bawah sidebar (`.sidebar-legal`) dan footer halaman utama (`.page-footer`).
 
 ---
 

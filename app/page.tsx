@@ -434,6 +434,11 @@ export default function VaultPage() {
           >
             <span>↗</span> Blogger Login
           </a>
+          <div className="sidebar-legal">
+            <a href="/privacy-policy" onClick={() => setMobileMenuOpen(false)}>Privacy Policy</a>
+            <span>•</span>
+            <a href="/terms" onClick={() => setMobileMenuOpen(false)}>Terms</a>
+          </div>
         </div>
       </aside>
 
@@ -566,6 +571,15 @@ export default function VaultPage() {
             <button className="primary-btn" onClick={() => setShowUpload(true)}>＋ Upload media</button>
           </div>
         )}
+
+        <footer className="page-footer">
+          <div>© {new Date().getFullYear()} Boven Image — Media Vault Boven Digoel</div>
+          <div className="footer-legal">
+            <a href="/privacy-policy">Kebijakan Privasi</a>
+            <span>•</span>
+            <a href="/terms">Ketentuan Layanan</a>
+          </div>
+        </footer>
       </section>
 
       {showUpload && (
