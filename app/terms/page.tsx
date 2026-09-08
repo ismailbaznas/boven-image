@@ -111,7 +111,7 @@ export default function TermsPage() {
             <div style={{ marginTop: "8px", background: "#fbfcfb", padding: "12px", border: "1px solid var(--line)", borderRadius: "8px", fontSize: "12.5px" }}>
               <div><strong>Pengelola:</strong> BAZNAS Kabupaten Boven Digoel</div>
               <div><strong>Alamat:</strong> Jl. Trans Papua, Tanah Merah, Boven Digoel, Papua Selatan</div>
-              <div><strong>Email:</strong> <code>baznasbovendigoel@gmail.com</code></div>
+              <div><strong>Email:</strong> <code>ismailbaznas@gmail.com</code></div>
             </div>
           </div>
         </section>
