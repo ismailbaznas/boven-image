@@ -522,7 +522,13 @@ strong.staged-filesize {
 .upload-log { margin: 14px 0 0; max-height: 180px; overflow: auto; padding: 10px; border-radius: 10px; background: #f5f7f5; border: 1px solid var(--line); color: #59615b; font-size: 10px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
-.detail-backdrop { justify-content: flex-end; padding: 0; }
+.modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(18, 25, 20, 0.42); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.upload-modal { width: min(700px, 100%); max-height: calc(100vh - 40px); overflow: auto; background: #fff; border-radius: 18px; padding: 22px; box-shadow: 0 24px 70px rgba(0,0,0,0.2); }
+.modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.modal-header h2 { margin: 4px 0 0; font-size: 22px; letter-spacing: -0.6px; }
+.close-btn { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: #69716b; font-size: 20px; line-height: 1; }
+
+.detail-backdrop { justify-content: flex-end; padding: 0; z-index: 110; }
 .detail-panel { width: min(860px, 100%); height: 100%; background: #fff; display: grid; grid-template-columns: 1.1fr 0.9fr; box-shadow: -20px 0 60px rgba(0,0,0,0.15); overflow: auto; }
 .detail-image { min-height: 100%; background: #edf0ed; display: flex; align-items: center; justify-content: center; }
 .detail-image img { width: 100%; height: 100%; max-height: 100vh; object-fit: contain; display: block; }
@@ -534,7 +540,27 @@ strong.staged-filesize {
 .details dd { margin: 4px 0 0; font-size: 11px; color: #343c36; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px !important; }
 .break { word-break: break-all; }
-.cover-action-wrap { margin-top: 18px; }
+
+.view-original-wrap { margin-top: 18px; }
+.view-original-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 750;
+  box-shadow: 0 4px 14px rgba(23, 107, 69, 0.2);
+  transition: transform .15s, filter .15s;
+}
+.view-original-btn:hover { transform: translateY(-1px); filter: brightness(0.95); }
+
+.cover-action-wrap { margin-top: 10px; }
 .cover-btn {
   width: 100%;
   padding: 10px 14px;
@@ -563,8 +589,30 @@ strong.staged-filesize {
 }
 .cover-btn:disabled { opacity: 0.6; cursor: wait; }
 
-.copy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
-.copy-grid button { border: 1px solid var(--line); background: #f8faf8; color: #4e5751; border-radius: 9px; padding: 10px; font-size: 10px; font-weight: 750; }
+.copy-section-title {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--line);
+  font-size: 9.5px;
+  font-weight: 850;
+  letter-spacing: 1.2px;
+  color: #8a928c;
+}
+.copy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.copy-grid button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: #f8faf8;
+  color: #4e5751;
+  border-radius: 9px;
+  padding: 10px 8px;
+  font-size: 11px;
+  font-weight: 750;
+  transition: .15s;
+}
 .copy-grid button:hover { background: var(--accent-soft); color: var(--accent); border-color: #c7dfd0; }
 
 .folder-tree { display: grid; gap: 2px; }
@@ -767,13 +815,31 @@ strong.staged-filesize {
   .staged-list { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 140px; }
   .staged-item { padding: 4px; }
 
-  .detail-backdrop { padding: 0; align-items: flex-end; }
-  .detail-panel {
-    border-radius: 18px 18px 0 0;
-    max-height: 88vh;
-    box-shadow: 0 -12px 40px rgba(0,0,0,0.3);
+  .detail-backdrop {
+    padding: 0;
+    align-items: flex-end;
+    z-index: 120;
   }
-  .detail-image { min-height: 180px; max-height: 35vh; }
-  .detail-content { padding: 18px 16px; }
-  .copy-grid { grid-template-columns: 1fr; gap: 6px; }
+  .detail-panel {
+    border-radius: 20px 20px 0 0;
+    max-height: 88vh;
+    box-shadow: 0 -12px 40px rgba(0,0,0,0.35);
+    display: flex;
+    flex-direction: column;
+  }
+  .detail-image {
+    min-height: 180px;
+    max-height: 32vh;
+    flex-shrink: 0;
+  }
+  .detail-content {
+    padding: 20px 16px 45px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .copy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 24px;
+  }
 }

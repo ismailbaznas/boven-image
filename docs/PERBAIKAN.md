@@ -13,7 +13,26 @@ Dokumen ini mencatat riwayat tahapan perbaikan pada aplikasi **Media Vault (Bove
 | **Tahap 2 (Selesai)** | `5e3cbb9` | Multi-file staging preview, progressive batch uploader dengan live progress bar, bebas timeout serverless |
 | **Tahap 3 (Selesai)** | `57ea470` | Mobile Off-Canvas Drawer (Sandwich ☰) & Floating Bottom Bar untuk akses penuh folder & program |
 | **Tahap 4 (Selesai)** | `18357d8` | Favicon logo resmi & Halaman Kepatuhan Google Cloud OAuth (/privacy-policy & /terms) |
-| **Tahap 5 (Selesai)** | *Pending commit* | Client-Side Auto-Compressor (Canvas 2.5K 85%) untuk foto raksasa > 4 MB (hemat kuota & bebas batas upload) |
+| **Tahap 5 (Selesai)** | `14bb3a7` | Client-Side Auto-Compressor (Canvas 2.5K 85%) untuk foto raksasa > 4 MB (hemat kuota & bebas batas upload) |
+| **Tahap 6 (Selesai)** | *Pending commit* | Perbaikan tampilan detail modal mobile (Copy HTML/Next.js rapi) & tombol Buka Resolusi Asli |
+
+---
+
+## 🚀 TAHAP 6 — Perbaikan Detail Media & Tombol Buka Gambar Asli
+
+### 1. Masalah Tampilan Detail Sebelumnya
+- Pada perangkat mobile, tombol "Copy HTML" terlihat terpotong sebagian dan "Copy Next.js" tertutup oleh floating menu dock.
+- Belum ada tombol langsung yang intuitif untuk membuka/melihat file resolusi original `s0` di tab baru.
+
+### 2. Solusi & Perubahan Baru (`app/page.tsx` & `app/vault.css`)
+- **Tombol Buka Gambar Resolusi Asli:**
+  - Ditambahkan tombol primer hijau: `[ 🔍 Buka Gambar Resolusi Asli (s0) ↗ ]` di dalam panel detail gambar (baik mobile maupun desktop).
+  - Mengarahkan langsung ke URL original `s0` di tab baru dengan `rel="noopener noreferrer"`.
+- **Perbaikan Grid Salin Kode di Mobile:**
+  - `.copy-grid` diubah menjadi 2 kolom rapi di mobile dengan padding bawah `45px - 50px` pada `.detail-content`.
+  - Tombol dilengkapi ikon visual: `📋 Copy URL`, `📝 Copy Markdown`, `🌐 Copy HTML`, dan `⚛️ Copy Next.js`.
+- **Pembersihan Floating Menu saat Modal Aktif:**
+  - Menu mengambang di bawah layar (`.mobile-floating-bar`) otomatis disembunyikan saat modal detail atau modal upload sedang aktif (`!selected && !showUpload`), sehingga tidak akan pernah menutupi tombol apapun.
 
 ---
 

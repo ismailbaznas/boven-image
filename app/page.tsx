@@ -874,6 +874,17 @@ export default function VaultPage() {
                 <div><dt>Hash SHA-256</dt><dd className="mono">{selected.hash}</dd></div>
                 <div><dt>Blogger URL</dt><dd className="mono break">{selected.blogger_url}</dd></div>
               </dl>
+              <div className="view-original-wrap">
+                <a
+                  href={selected.blogger_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="view-original-btn"
+                >
+                  <span>🔍</span> Buka Gambar Resolusi Asli (s0) ↗
+                </a>
+              </div>
+
               <div className="cover-action-wrap">
                 <button
                   type="button"
@@ -888,62 +899,90 @@ export default function VaultPage() {
                     : "🖼 Jadikan Sampul Organisasi"}
                 </button>
               </div>
+
+              <div className="copy-section-title">SALIN KODE / TAUTAN</div>
               <div className="copy-grid">
-                <button onClick={() => copy(selected.blogger_url)}>Copy URL</button>
-                <button onClick={() => copy(`![${selected.title}](${selected.blogger_url})`)}>Copy Markdown</button>
-                <button onClick={() => copy(`<img src="${selected.blogger_url}" alt="${selected.title}" />`)}>Copy HTML</button>
-                <button onClick={() => copy(`<Image src="${selected.blogger_url}" alt="${selected.title}" width={800} height={600} />`)}>Copy Next.js</button>
+                <button type="button" onClick={() => copy(selected.blogger_url)}>
+                  <span>📋</span> Copy URL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copy(`![${selected.title}](${selected.blogger_url})`)}
+                >
+                  <span>📝</span> Copy Markdown
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    copy(`<img src="${selected.blogger_url}" alt="${selected.title}" />`)
+                  }
+                >
+                  <span>🌐</span> Copy HTML
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    copy(
+                      `<Image src="${selected.blogger_url}" alt="${selected.title}" width={800} height={600} />`
+                    )
+                  }
+                >
+                  <span>⚛️</span> Copy Next.js
+                </button>
               </div>
             </div>
           </aside>
         </div>
       )}
+
       {/* Floating Bottom Navigation Bar for Mobile */}
-      <nav className="mobile-floating-bar" aria-label="Navigasi cepat mobile">
-        <button
-          type="button"
-          className={`mobile-fab-btn ${!filterOrg && !filterProg && !mobileMenuOpen ? "active" : ""}`}
-          onClick={() => {
-            setFilterOrg("");
-            setFilterProg("");
-            load("", "");
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-        >
-          <span className="fab-icon">▦</span>
-          <small>Semua</small>
-        </button>
-        <button
-          type="button"
-          className={`mobile-fab-btn ${filterOrg || mobileMenuOpen ? "active" : ""}`}
-          onClick={() => setMobileMenuOpen(true)}
-        >
-          <span className="fab-icon">📁</span>
-          <small>Folder {folders.length ? `(${folders.length})` : ""}</small>
-        </button>
-        <button
-          type="button"
-          className="mobile-fab-btn fab-upload"
-          onClick={() => setShowUpload(true)}
-        >
-          <span className="fab-icon">＋</span>
-          <small>Upload</small>
-        </button>
-        <button
-          type="button"
-          className="mobile-fab-btn"
-          onClick={() => {
-            const searchEl = document.querySelector(".search-box input") as HTMLInputElement;
-            if (searchEl) {
-              searchEl.scrollIntoView({ behavior: "smooth", block: "center" });
-              searchEl.focus();
-            }
-          }}
-        >
-          <span className="fab-icon">🔍</span>
-          <small>Cari</small>
-        </button>
-      </nav>
+      {!selected && !showUpload && (
+        <nav className="mobile-floating-bar" aria-label="Navigasi cepat mobile">
+          <button
+            type="button"
+            className={`mobile-fab-btn ${!filterOrg && !filterProg && !mobileMenuOpen ? "active" : ""}`}
+            onClick={() => {
+              setFilterOrg("");
+              setFilterProg("");
+              load("", "");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          >
+            <span className="fab-icon">▦</span>
+            <small>Semua</small>
+          </button>
+          <button
+            type="button"
+            className={`mobile-fab-btn ${filterOrg || mobileMenuOpen ? "active" : ""}`}
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <span className="fab-icon">📁</span>
+            <small>Folder {folders.length ? `(${folders.length})` : ""}</small>
+          </button>
+          <button
+            type="button"
+            className="mobile-fab-btn fab-upload"
+            onClick={() => setShowUpload(true)}
+          >
+            <span className="fab-icon">＋</span>
+            <small>Upload</small>
+          </button>
+          <button
+            type="button"
+            className="mobile-fab-btn"
+            onClick={() => {
+              const searchEl = document.querySelector(".search-box input") as HTMLInputElement;
+              if (searchEl) {
+                searchEl.scrollIntoView({ behavior: "smooth", block: "center" });
+                searchEl.focus();
+              }
+            }}
+          >
+            <span className="fab-icon">🔍</span>
+            <small>Cari</small>
+          </button>
+        </nav>
+      )}
     </main>
   );
 }
