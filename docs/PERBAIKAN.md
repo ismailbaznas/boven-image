@@ -21,7 +21,24 @@ Dokumen ini mencatat riwayat tahapan perbaikan pada aplikasi **Media Vault (Bove
 | **Tahap 5 (Selesai)** | `14bb3a7` | Client-Side Auto-Compressor (Canvas 2.5K 85%) untuk foto raksasa > 4 MB (hemat kuota & bebas batas upload) |
 | **Tahap 6 (Selesai)** | `0876945` | Perbaikan tampilan detail modal mobile (Copy HTML/Next.js rapi) & tombol Buka Resolusi Asli |
 | **Tahap 7 (Selesai)** | `62fa027` | Integrasi Disaster Recovery Auto-Sync ke GitHub Manifest (`ismailbaznas/boven-image-manifest`) |
-| **Tahap 8 (Selesai)** | *Pending commit* | Paginasi dinamis (`page` / `range`), tombol "Muat Lebih Banyak", & perbaikan akurasi hitungan homepage |
+| **Tahap 8 (Selesai)** | `8cfa176` | Paginasi dinamis (`page` / `range`), tombol "Muat Lebih Banyak", & perbaikan akurasi hitungan homepage |
+| **Tahap 9 (Selesai)** | *Pending commit* | Pembacaan & pemformatan tanggal kegiatan manual pada kartu galeri & modal detail |
+
+---
+
+## 🚀 TAHAP 9 — Pembacaan Tanggal Kegiatan Manual pada Kartu Galeri
+
+### 1. Masalah Tampilan Tanggal Sebelumnya
+- Di kartu thumbnail galeri, tanggal yang ditampilkan di bawah nama program membaca variabel waktu sistem upload `created_at` (misal `10 Sep 2026`) alih-alih membaca tanggal kegiatan manual yang diinputkan user di form (`metadata.tanggal`, misal `1 Jun 2026`).
+
+### 2. Solusi & Perubahan Baru (`app/page.tsx`)
+- **Helper `formatDisplayDate`:**
+  - Membaca dan memprioritaskan tanggal manual kegiatan (`metadata.tanggal`).
+  - Mengonversi format tanggal ISO `YYYY-MM-DD` menjadi format bahasa Indonesia yang rapi (contoh: `1 Jun 2026` untuk kartu dan `1 Juni 2026` untuk modal detail).
+  - Melakukan fallback otomatis ke `created_at` jika tanggal manual tidak diisi.
+- **Pemisahan Jelas di Modal Detail:**
+  - **Tanggal Kegiatan:** Menampilkan tanggal kegiatan yang dipilih (contoh: `1 Juni 2026`).
+  - **Waktu Upload:** Menampilkan waktu server saat foto diunggah (contoh: `10 Sep 2026, 21:42`).
 
 ---
 

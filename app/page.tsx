@@ -37,6 +37,46 @@ const getTodayDate = () => {
   return `${year}-${month}-${day}`;
 };
 
+function formatDisplayDate(manualDate?: string, fallbackCreatedAt?: string, full = false): string {
+  if (manualDate) {
+    const parts = String(manualDate).split("-");
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const d = new Date(year, month, day);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: full ? "long" : "short",
+          year: "numeric",
+        });
+      }
+    }
+    const d = new Date(manualDate);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: full ? "long" : "short",
+        year: "numeric",
+      });
+    }
+  }
+
+  if (fallbackCreatedAt) {
+    const d = new Date(fallbackCreatedAt);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: full ? "long" : "short",
+        year: "numeric",
+      });
+    }
+  }
+
+  return "—";
+}
+
 const emptyForm = {
   organisasi: "",
   program: "",
@@ -724,13 +764,7 @@ export default function VaultPage() {
                   <div className="media-meta">
                     <span>{m.metadata?.program || "Tanpa program"}</span>
                     <span>•</span>
-                    <span>
-                      {new Date(m.created_at).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </span>
+                    <span>{formatDisplayDate(m.metadata?.tanggal, m.created_at)}</span>
                   </div>
                 </div>
               </article>
@@ -1034,8 +1068,9 @@ export default function VaultPage() {
               <dl className="details">
                 <div><dt>Organisasi</dt><dd>{selected.organization_id || selected.metadata?.organisasi || "—"}</dd></div>
                 <div><dt>Program</dt><dd>{selected.metadata?.program || "—"}</dd></div>
-                <div><dt>Tanggal</dt><dd>{selected.metadata?.tanggal || new Date(selected.created_at).toLocaleDateString("id-ID")}</dd></div>
+                <div><dt>Tanggal Kegiatan</dt><dd>{formatDisplayDate(selected.metadata?.tanggal, selected.created_at, true)}</dd></div>
                 <div><dt>Lokasi</dt><dd>{selected.metadata?.lokasi || "—"}</dd></div>
+                <div><dt>Waktu Upload</dt><dd>{new Date(selected.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</dd></div>
                 <div><dt>Hash SHA-256</dt><dd className="mono">{selected.hash}</dd></div>
                 <div><dt>Blogger URL</dt><dd className="mono break">{selected.blogger_url}</dd></div>
               </dl>
