@@ -39,43 +39,60 @@ export async function GET() {
       if (r.program_id) progCount[r.program_id] = (progCount[r.program_id] || 0) + 1;
     });
 
-    // 1. Ambil manual cover_media_id jika ada
-    const manualCoverIds = (orgs || []).map((o: any) => o.cover_media_id).filter(Boolean);
+    // 1. Ambil manual cover_media_id jika ada (dari organisasi & programs)
+    const manualOrgCoverIds = (orgs || []).map((o: any) => o.cover_media_id).filter(Boolean);
+    const manualProgCoverIds = (progs || []).map((p: any) => p.cover_media_id).filter(Boolean);
+    const allManualCoverIds = Array.from(new Set([...manualOrgCoverIds, ...manualProgCoverIds]));
+    
     const manualCoverMap: Record<string, string> = {};
-    if (manualCoverIds.length) {
+    if (allManualCoverIds.length) {
       const { data: manualMedia } = await sb
         .from("media")
         .select("id, blogger_url")
-        .in("id", manualCoverIds);
+        .in("id", allManualCoverIds);
       (manualMedia || []).forEach((m: any) => {
         manualCoverMap[m.id] = m.blogger_url;
       });
     }
 
-    // 2. Fallback cover: ambil 1 media terbaru per org jika cover_media_id belum diset
+    // 2. Fallback cover: ambil media terbaru per org & per program jika cover_media_id belum diset
     const { data: latest } = await sb
       .from("media")
-      .select("id, organization_id, blogger_url")
+      .select("id, organization_id, program_id, blogger_url, metadata")
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(300);
+
     const latestCoverMap: Record<string, string> = {};
+    const latestProgCoverMap: Record<string, string> = {};
+    const progDateMap: Record<string, string> = {};
+
     (latest || []).forEach((m: any) => {
       if (m.organization_id && !latestCoverMap[m.organization_id]) {
         latestCoverMap[m.organization_id] = m.blogger_url;
       }
+      if (m.program_id && !latestProgCoverMap[m.program_id]) {
+        latestProgCoverMap[m.program_id] = m.blogger_url;
+      }
+      if (m.program_id && !progDateMap[m.program_id] && m.metadata?.tanggal) {
+        progDateMap[m.program_id] = m.metadata.tanggal;
+      }
     });
 
     const tree = (orgs || []).map((o: any) => {
-      // Prioritaskan manual cover_media_id, baru fallback ke latest media
       const resolvedCover = (o.cover_media_id && manualCoverMap[o.cover_media_id]) || latestCoverMap[o.id] || null;
       return {
         ...o,
         count: orgCount[o.id] || 0,
         cover: resolvedCover,
-        programs: (progs || []).filter((p: any) => p.organization_id === o.id).map((p: any) => ({
-          ...p,
-          count: progCount[p.id] || 0,
-        })),
+        programs: (progs || []).filter((p: any) => p.organization_id === o.id).map((p: any) => {
+          const resolvedProgCover = (p.cover_media_id && manualCoverMap[p.cover_media_id]) || latestProgCoverMap[p.id] || null;
+          return {
+            ...p,
+            count: progCount[p.id] || 0,
+            cover: resolvedProgCover,
+            date: progDateMap[p.id] || null,
+          };
+        }),
       };
     });
 
@@ -104,25 +121,43 @@ export async function GET() {
   }
 }
 
-// Set / unset cover_media_id secara manual
+// Set / unset cover_media_id secara manual (bisa untuk organisasi atau program)
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { org_id, media_id } = body;
-    if (!org_id) {
-      return NextResponse.json({ error: "org_id wajib diisi" }, { status: 400 });
+    const { org_id, prog_id, media_id } = body;
+
+    if (!org_id && !prog_id) {
+      return NextResponse.json({ error: "org_id atau prog_id wajib diisi" }, { status: 400 });
     }
 
     const sb = createAdminSupabase();
-    const { data, error } = await sb
-      .from("organizations")
-      .update({ cover_media_id: media_id || null })
-      .eq("id", org_id)
-      .select()
-      .single();
 
-    if (error) throw error;
-    return NextResponse.json({ success: true, data });
+    if (prog_id) {
+      const { data, error } = await sb
+        .from("programs")
+        .update({ cover_media_id: media_id || null })
+        .eq("id", prog_id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return NextResponse.json({ success: true, target: "program", data });
+    }
+
+    if (org_id) {
+      const { data, error } = await sb
+        .from("organizations")
+        .update({ cover_media_id: media_id || null })
+        .eq("id", org_id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return NextResponse.json({ success: true, target: "organization", data });
+    }
+
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

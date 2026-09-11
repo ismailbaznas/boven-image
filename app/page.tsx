@@ -397,11 +397,47 @@ export default function VaultPage() {
     }
   }
 
+  async function handleSetProgramCover(media: Media) {
+    const progId = media.program_id;
+    if (!progId) return alert("Program tidak ditemukan pada foto ini");
+
+    const allProgs = folders.flatMap((o: any) => o.programs || []);
+    const currentProg = allProgs.find((p: any) => p.id === progId);
+    const isAlreadyCover = currentProg?.cover_media_id === media.id;
+    const newMediaId = isAlreadyCover ? null : media.id;
+
+    setSettingCover(true);
+    try {
+      const r = await fetch("/api/vault/folders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prog_id: progId, media_id: newMediaId }),
+      });
+      const j = await r.json();
+      if (j.success) {
+        await loadFolders();
+      } else {
+        alert("Gagal mengatur sampul program: " + (j.error || ""));
+      }
+    } catch (error: any) {
+      alert("Error: " + error.message);
+    } finally {
+      setSettingCover(false);
+    }
+  }
+
   const isCurrentCover = useMemo(() => {
     if (!selected) return false;
     const orgId = selected.organization_id || slugify(selected.metadata?.organisasi || "");
     const org = folders.find((o: any) => o.id === orgId);
     return org?.cover_media_id === selected.id;
+  }, [folders, selected]);
+
+  const isCurrentProgCover = useMemo(() => {
+    if (!selected || !selected.program_id) return false;
+    const allProgs = folders.flatMap((o: any) => o.programs || []);
+    const currentProg = allProgs.find((p: any) => p.id === selected.program_id);
+    return currentProg?.cover_media_id === selected.id;
   }, [folders, selected]);
 
   const globalTotalMedia = useMemo(() => {
@@ -1098,6 +1134,21 @@ export default function VaultPage() {
                     ? "✓ Sampul Organisasi Aktif (Klik untuk lepas)"
                     : "🖼 Jadikan Sampul Organisasi"}
                 </button>
+                {selected.program_id && (
+                  <button
+                    type="button"
+                    style={{ marginTop: "8px" }}
+                    className={`cover-btn ${isCurrentProgCover ? "active-cover" : ""}`}
+                    disabled={settingCover}
+                    onClick={() => handleSetProgramCover(selected)}
+                  >
+                    {settingCover
+                      ? "Menyimpan sampul..."
+                      : isCurrentProgCover
+                      ? "✓ Sampul Program Aktif (Klik untuk lepas)"
+                      : "🎯 Jadikan Sampul Program Kegiatan"}
+                  </button>
+                )}
               </div>
 
               <div className="copy-section-title">SALIN KODE / TAUTAN</div>
