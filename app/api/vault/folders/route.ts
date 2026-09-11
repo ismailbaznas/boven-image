@@ -12,11 +12,29 @@ export async function GET() {
     const { data: progs, error: e2 } = await sb.from("programs").select("*").order("created_at");
     if (e2) throw e2;
 
-    // hitung count per org/prog
-    const { data: counts } = await sb.from("media").select("organization_id, program_id");
+    // hitung count per org/prog (ambil seluruh row via chunked range agar tidak terpotong batas 1000 PostgREST)
+    const allCounts: any[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await sb
+        .from("media")
+        .select("organization_id, program_id")
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      if (data && data.length > 0) {
+        allCounts.push(...data);
+        if (data.length < pageSize) hasMore = false;
+        else from += pageSize;
+      } else {
+        hasMore = false;
+      }
+    }
+
     const orgCount: Record<string, number> = {};
     const progCount: Record<string, number> = {};
-    (counts || []).forEach((r: any) => {
+    allCounts.forEach((r: any) => {
       if (r.organization_id) orgCount[r.organization_id] = (orgCount[r.organization_id] || 0) + 1;
       if (r.program_id) progCount[r.program_id] = (progCount[r.program_id] || 0) + 1;
     });

@@ -70,7 +70,8 @@ export async function POST(req: NextRequest) {
       .from("media")
       .select("id")
       .ilike("id", "boven-digoel%")
-      .limit(500);
+      .order("created_at", { ascending: false })
+      .limit(300);
 
     if (existingList && existingList.length) {
       const numbers = existingList.map((row: { id: string }) => {

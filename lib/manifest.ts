@@ -13,18 +13,47 @@ export type ManifestData = {
   };
 };
 
+export async function fetchAllMedia(sb: any): Promise<any[]> {
+  const allMedia: any[] = [];
+  const pageSize = 1000;
+  let from = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const to = from + pageSize - 1;
+    const { data, error } = await sb
+      .from("media")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) throw error;
+    if (data && data.length > 0) {
+      allMedia.push(...data);
+      if (data.length < pageSize) {
+        hasMore = false;
+      } else {
+        from += pageSize;
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return allMedia;
+}
+
 export async function fetchCatalogData(): Promise<ManifestData> {
   const sb = createAdminSupabase();
 
-  const [orgsRes, progsRes, mediaRes] = await Promise.all([
+  const [orgsRes, progsRes, media] = await Promise.all([
     sb.from("organizations").select("*").order("name"),
     sb.from("programs").select("*").order("name"),
-    sb.from("media").select("*").order("created_at", { ascending: false }),
+    fetchAllMedia(sb),
   ]);
 
   const organizations = orgsRes.data || [];
   const programs = progsRes.data || [];
-  const media = mediaRes.data || [];
 
   const summary = {
     total_media: media.length,
